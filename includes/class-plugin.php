@@ -1,0 +1,38 @@
+<?php
+namespace SkiRideServetech;
+
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+class Plugin {
+    private static $_instance = null;
+
+    public static function instance() {
+        if ( is_null( self::$_instance ) ) {
+            self::$_instance = new self();
+        }
+        return self::$_instance;
+    }
+
+    private function __construct() {
+        // Elementor Init
+        add_action( 'plugins_loaded', [ $this, 'init' ] );
+    }
+
+    public function init() {
+        // Check Elementor
+        if ( ! did_action( 'elementor/loaded' ) ) {
+            add_action( 'admin_notices', [ $this, 'elementor_missing_notice' ] );
+            return;
+        }
+
+        // Load widget manager
+        require_once SRS_PLUGIN_PATH . 'includes/class-widget-manager.php';
+        Widget_Manager::instance();
+    }
+
+    public function elementor_missing_notice() {
+        echo '<div class="notice notice-error"><p>';
+        esc_html_e( 'Ski Ride Servetech requires Elementor to be installed and activated.', 'ski-ride-servetech' );
+        echo '</p></div>';
+    }
+}
