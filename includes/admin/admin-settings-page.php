@@ -1,0 +1,547 @@
+<?php
+namespace SkiRideAdminServetech;
+
+if (!defined('ABSPATH'))
+    exit;
+
+class Admin_settings_page
+{
+    private static $_instance = null;
+    private $option_key = 'srs_form_settings';
+    public static function instance()
+    {
+        if (is_null(self::$_instance)) {
+            self::$_instance = new self();
+        }
+        return self::$_instance;
+    }
+
+    private function __construct()
+    {
+        add_action('admin_enqueue_scripts', [$this, 'myplugin_enqueue_admin_assets']);
+        add_action('admin_menu', [$this, 'register_menu']);
+        add_action('admin_init', [$this, 'register_settings']);
+    }
+
+
+    public function myplugin_enqueue_admin_assets($hook)
+    {
+        // Load Bootstrap CSS
+        wp_enqueue_style(
+            'bootstrap-css',
+            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+            array(),
+            '5.3.3'
+        );
+
+        // Load Bootstrap JS
+        wp_enqueue_script(
+            'bootstrap-js',
+            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+            array('jquery'),
+            '5.3.3',
+            true
+        );
+    }
+
+
+    public function register_menu()
+    {
+        add_menu_page(
+            __('Ski Ride Content', 'ski-ride-servetech'),
+            __('Ski Ride Content', 'ski-ride-servetech'),
+            'manage_options',
+            'srs-settings',
+            [$this, 'render_settings_page'],
+            'dashicons-edit',
+            30
+        );
+    }
+
+    public function register_settings()
+    {
+        register_setting('srs_settings_group', $this->option_key, [
+            'sanitize_callback' => [$this, 'sanitize_settings']
+        ]);
+    }
+
+
+
+    /**
+     * Sanitize plugin settings
+     */
+    public function sanitize_settings($input)
+    {
+        $output = [];
+
+        // Form Title
+        if (!empty($input['form_title'])) {
+            $output['form_title'] = sanitize_text_field($input['form_title']);
+        }
+
+        // Locations & Abilities
+        $fields_to_map = ['locations', 'abilities', 'renting_options'];
+        foreach ($fields_to_map as $field) {
+            if (!empty($input[$field]) && is_array($input[$field])) {
+                $output[$field] = array_map('sanitize_text_field', $input[$field]);
+            }
+        }
+
+        // Gear Types Configuration
+        $gear_types = [
+            'packages' => ['name', 'price', 'desc', 'product_id'],
+            'gears' => ['name', 'price', 'product_id'],
+            'gloves' => ['name', 'price', 'desc', 'product_id'],
+            'goggles' => ['name', 'price', 'desc', 'product_id'],
+            'socks' => ['name', 'price', 'desc', 'product_id'],
+            'passes' => ['title', 'price', 'product_id'],
+        ];
+
+        foreach ($gear_types as $gear_type => $keys) {
+            if (!empty($input[$gear_type]) && is_array($input[$gear_type])) {
+                $output[$gear_type] = [];
+
+                // Determine main key (name or title)
+                $main_key = in_array('name', $keys) ? 'name' : 'title';
+                $names_or_titles = $input[$gear_type][$main_key] ?? [];
+                $prices = $input[$gear_type]['price'] ?? [];
+                $descs = $input[$gear_type]['desc'] ?? [];
+                $product_ids = $input[$gear_type]['product_id'] ?? [];
+
+                $count = max(count($names_or_titles), count($prices), count($descs), count($product_ids));
+
+                for ($i = 0; $i < $count; $i++) {
+                    $title = $names_or_titles[$i] ?? '';
+                    $price = $prices[$i] ?? 0;
+                    $desc = $descs[$i] ?? '';
+                    $product_id = $product_ids[$i] ?? 0;
+
+                    // Skip completely empty rows
+                    if (empty($title) && empty($price) && empty($desc)) {
+                        continue;
+                    }
+
+                    $item_data = [
+                        $main_key => sanitize_text_field($title),
+                        'price' => floatval($price),
+                        'product_id' => intval($product_id),
+                    ];
+
+                    if (in_array('desc', $keys)) {
+                        $item_data['desc'] = sanitize_text_field($desc);
+                    }
+
+                    // Sync with WooCommerce and update product_id
+                    $item_data['product_id'] = $this->sync_woocommerce_product($gear_type, $item_data);
+
+                    $output[$gear_type][] = $item_data;
+                }
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * Sync a gear item with WooCommerce product
+     */
+    private function sync_woocommerce_product($gear_type, $item) {
+        if (!class_exists('WC_Product')) {
+            return 0; // WooCommerce not active
+        }
+
+        $product_name = $item['name'] ?? $item['title'] ?? '';
+        if (empty($product_name)) {
+            return 0;
+        }
+
+        // Check if product already exists
+        $existing = get_page_by_title($product_name, OBJECT, 'product');
+
+        if ($existing) {
+            $product_id = $existing->ID;
+            $product = wc_get_product($product_id);
+            if ($product) {
+                $product->set_regular_price($item['price']);
+                if ($gear_type === 'packages') {
+                    update_post_meta($product_id, 'is_rental', 'yes');
+                }
+                $product->save();
+            }
+        } else {
+            // Create new WooCommerce product
+            $product = new \WC_Product_Simple();
+            $product->set_name($product_name);
+            $product->set_regular_price($item['price']);
+            $product->save();
+            $product_id = $product->get_id();
+            if ($gear_type === 'packages') {
+                update_post_meta($product_id, 'is_rental', 'yes');
+            }
+        }
+
+        return $product_id;
+    }
+
+
+    public function render_settings_page()
+    {
+        $options = get_option($this->option_key, []);
+        // echo "<pre>";
+        // print_r($options);
+        // echo "</pre>";
+
+        ?>
+        <div class="wrap bootstrap-wrapper">
+            <h1><?php _e('Ski Ride Form Settings', 'ski-ride-servetech'); ?></h1>
+            <form method="post" action="options.php">
+                <?php settings_fields('srs_settings_group'); ?>
+
+                <!-- Bootstrap Nav Tabs -->
+                <ul class="nav nav-tabs mb-4" id="srsSettingsTabs" role="tablist">
+                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab"
+                            href="#tab-locations"><?php _e('Locations', 'ski-ride-servetech'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
+                            href="#tab-abilities"><?php _e('Abilities', 'ski-ride-servetech'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
+                            href="#tab-renting"><?php _e('Renting Options', 'ski-ride-servetech'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
+                            href="#tab-packages"><?php _e('Packages', 'ski-ride-servetech'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
+                            href="#tab-gears"><?php _e('Extra Gear', 'ski-ride-servetech'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
+                            href="#tab-gloves"><?php _e('Gloves', 'ski-ride-servetech'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
+                            href="#tab-goggles"><?php _e('Goggles', 'ski-ride-servetech'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
+                            href="#tab-socks"><?php _e('Socks', 'ski-ride-servetech'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
+                            href="#tab-passes"><?php _e('Passes', 'ski-ride-servetech'); ?></a></li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- LOCATIONS -->
+                    <div class="tab-pane fade show active" id="tab-locations">
+                        <h4><?php _e('Manage Locations', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle repeater-table" data-field="locations">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Location Name', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $locations = $options['locations'] ?? [];
+                                foreach ($locations as $loc) { ?>
+                                    <tr>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[locations][]"
+                                                value="<?php echo esc_attr($loc); ?>"></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-success add-row" data-field="locations">+
+                            <?php _e('Add Location', 'ski-ride-servetech'); ?></button>
+                    </div>
+
+                    <!-- ABILITIES -->
+                    <div class="tab-pane fade" id="tab-abilities">
+                        <h4><?php _e('Ability Levels', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle repeater-table" data-field="abilities">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Ability', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $abilities = $options['abilities'] ?? [];
+                                foreach ($abilities as $ability) { ?>
+                                    <tr>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[abilities][]"
+                                                value="<?php echo esc_attr($ability); ?>"></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-success add-row" data-field="abilities">+
+                            <?php _e('Add Ability', 'ski-ride-servetech'); ?></button>
+                    </div>
+
+                    <!-- RENTING OPTIONS -->
+                    <div class="tab-pane fade" id="tab-renting">
+                        <h4><?php _e('Renting Options', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle repeater-table" data-field="renting_options">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Option', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $renting = $options['renting_options'] ?? [];
+                                foreach ($renting as $opt) { ?>
+                                    <tr>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[renting_options][]"
+                                                value="<?php echo esc_attr($opt); ?>"></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-success add-row" data-field="renting_options">+
+                            <?php _e('Add Renting Option', 'ski-ride-servetech'); ?></button>
+                    </div>
+
+                    
+                    <!-- PACKAGES -->
+                    <div class="tab-pane fade" id="tab-packages">
+                        <h4><?php _e('Packages', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle repeater-table" data-field="packages">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Name', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Description', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $packages = $options['packages'] ?? [];
+                                foreach ($packages as $package) { ?>
+                                    <tr>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[packages][name][]"
+                                                value="<?php echo esc_attr($package['name'] ?? ''); ?>"></td>
+                                        <td><input type="number" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[packages][price][]"
+                                                value="<?php echo esc_attr($package['price'] ?? ''); ?>"></td>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[packages][desc][]"
+                                                value="<?php echo esc_attr($package['desc'] ?? ''); ?>"></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-success add-row" data-field="packages">+
+                            <?php _e('Add Package', 'ski-ride-servetech'); ?></button>
+                    </div>
+
+                    <!-- EXTRA GEAR -->
+                    <div class="tab-pane fade" id="tab-gears">
+                        <h4><?php _e('Extra Gear', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle repeater-table" data-field="gears">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Gear Name', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $gears = $options['gears'] ?? [];
+                                foreach ($gears as $gear) { ?>
+                                    <tr>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[gears][name][]"
+                                                value="<?php echo esc_attr($gear['name'] ?? ''); ?>"></td>
+                                        <td><input type="number" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[gears][price][]"
+                                                value="<?php echo esc_attr($gear['price'] ?? ''); ?>"></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-success add-row" data-field="gears">+
+                            <?php _e('Add Gear', 'ski-ride-servetech'); ?></button>
+                    </div>
+
+
+                    <!-- GLOVES -->
+                    <div class="tab-pane fade" id="tab-gloves">
+                        <h4><?php _e('Gloves', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle repeater-table" data-field="gloves">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Name', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Description', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $gloves = $options['gloves'] ?? [];
+                                foreach ($gloves as $glove) { ?>
+                                    <tr>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[gloves][name][]"
+                                                value="<?php echo esc_attr($glove['name'] ?? ''); ?>"></td>
+                                        <td><input type="number" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[gloves][price][]"
+                                                value="<?php echo esc_attr($glove['price'] ?? ''); ?>"></td>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[gloves][desc][]"
+                                                value="<?php echo esc_attr($glove['desc'] ?? ''); ?>"></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-success add-row" data-field="gloves">+
+                            <?php _e('Add Glove', 'ski-ride-servetech'); ?></button>
+                    </div>
+
+                    <!-- GOGGLES -->
+                    <div class="tab-pane fade" id="tab-goggles">
+                        <h4><?php _e('Goggles', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle repeater-table" data-field="goggles">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Name', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Description', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $goggles = $options['goggles'] ?? [];
+                                foreach ($goggles as $goggle) { ?>
+                                    <tr>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[goggles][name][]"
+                                                value="<?php echo esc_attr($goggle['name'] ?? ''); ?>"></td>
+                                        <td><input type="number" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[goggles][price][]"
+                                                value="<?php echo esc_attr($goggle['price'] ?? ''); ?>"></td>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[goggles][desc][]"
+                                                value="<?php echo esc_attr($goggle['desc'] ?? ''); ?>"></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-success add-row" data-field="goggles">+
+                            <?php _e('Add Goggle', 'ski-ride-servetech'); ?></button>
+                    </div>
+
+                    <!-- SOCKS -->
+                    <div class="tab-pane fade" id="tab-socks">
+                        <h4><?php _e('Socks', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle repeater-table" data-field="socks">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Name', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Description', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $socks = $options['socks'] ?? [];
+                                foreach ($socks as $sock) { ?>
+                                    <tr>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[socks][name][]"
+                                                value="<?php echo esc_attr($sock['name'] ?? ''); ?>"></td>
+                                        <td><input type="number" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[socks][price][]"
+                                                value="<?php echo esc_attr($sock['price'] ?? ''); ?>"></td>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[socks][desc][]"
+                                                value="<?php echo esc_attr($sock['desc'] ?? ''); ?>"></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-success add-row" data-field="socks">+
+                            <?php _e('Add Sock', 'ski-ride-servetech'); ?></button>
+                    </div>
+
+
+                    <!-- PASSES -->
+                    <div class="tab-pane fade" id="tab-passes">
+                        <h4><?php _e('Passes', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle repeater-table" data-field="passes">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Title', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $passes = $options['passes'] ?? [];
+                                foreach ($passes as $pass) { ?>
+                                    <tr>
+                                        <td><input type="text" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[passes][title][]"
+                                                value="<?php echo esc_attr($pass['title'] ?? ''); ?>"></td>
+                                        <td><input type="number" class="form-control"
+                                                name="<?php echo $this->option_key; ?>[passes][price][]"
+                                                value="<?php echo esc_attr($pass['price'] ?? ''); ?>"></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-success add-row" data-field="passes">+
+                            <?php _e('Add Pass', 'ski-ride-servetech'); ?></button>
+                    </div>
+
+                </div>
+
+                <?php submit_button(__('Save Settings', 'ski-ride-servetech'), 'primary'); ?>
+            </form>
+        </div>
+
+        <!-- Dynamic Row Script -->
+        <script>
+            jQuery(document).ready(function ($) {
+                $(".add-row").on("click", function () {
+                    let field = $(this).data("field");
+                    let table = $(".repeater-table[data-field='" + field + "'] tbody");
+
+                    let row = "";
+                    if (["packages", "gloves", "goggles", "socks"].includes(field)) {
+                        row = `<tr>
+                        <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][name][]" placeholder="Name"></td>
+                        <td><input type="number" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][price][]" placeholder="Price"></td>
+                        <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][desc][]" placeholder="Description"></td>
+                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                    </tr>`;
+                    } else if (field === "passes" || field === "gears") {
+                        row = `<tr>
+                        <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[passes][title][]" placeholder="Pass Title"></td>
+                        <td><input type="number" class="form-control" name="<?php echo $this->option_key; ?>[passes][price][]" placeholder="Price"></td>
+                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                    </tr>`;
+                    } else {
+                        row = `<tr>
+                        <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][]" placeholder="Enter value"></td>
+                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                    </tr>`;
+                    }
+
+                    table.append(row);
+                });
+
+                $(document).on("click", ".remove-row", function () {
+                    $(this).closest("tr").remove();
+                });
+            });
+        </script>
+        <?php
+    }
+
+
+}

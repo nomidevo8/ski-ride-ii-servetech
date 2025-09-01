@@ -15,7 +15,7 @@ require_once __DIR__ . '/inc/elementor-controls/form-content-controls.php';
 
 class Ride_Booking_Form extends Widget_Base
 {
-
+    private $option_key = 'srs_form_settings';
     public function get_name()
     {
         return 'ride-booking-form';
@@ -53,12 +53,14 @@ class Ride_Booking_Form extends Widget_Base
 
     protected function render()
     {
-        $settings = $this->get_settings_for_display();
+        $elementorSettings = $this->get_settings_for_display();
+        $AdminSettings = get_option($this->option_key, []);
         // This will create PHP variables for each control
-        extract($settings);
+        extract($elementorSettings);
+        extract($AdminSettings);
 
         // Pass settings to template
-        $form_title = !empty($settings['form_title']) ? $settings['form_title'] : __('Book Your Ride', 'ski-ride-servetech');
+        $form_title = !empty($elementorSettings['form_title']) ? $elementorSettings['form_title'] : __('Book Your Ride', 'ski-ride-servetech');
 
         // Load template file
         $template = SRS_PLUGIN_PATH . 'includes/widgets/templates/ride-booking-form.php';

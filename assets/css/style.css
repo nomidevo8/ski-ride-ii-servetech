@@ -1,0 +1,11 @@
+/* Styling - Stay Calm   */
+
+
+.location-card input[type="radio"]:checked+label {
+    background-color: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+.step-trigger{
+    padding: 0px !important;
+}
