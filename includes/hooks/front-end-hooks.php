@@ -58,7 +58,7 @@ class Frontend_Hooks
 
         // 🔹 Find existing group for this user
         $existing = get_posts([
-            'post_type' => 'customer_group',
+            'post_type' => 'customer_groups',
             'post_status' => 'publish',
             'author' => $current_user_id,
             'numberposts' => 1,
@@ -70,7 +70,7 @@ class Frontend_Hooks
             // Create a new group if none
             $post_id = wp_insert_post([
                 'post_title' => 'Group of ' . wp_get_current_user()->display_name,
-                'post_type' => 'customer_group',
+                'post_type' => 'customer_groups',
                 'post_status' => 'publish',
                 'post_author' => $current_user_id,
             ]);
@@ -108,7 +108,7 @@ class Frontend_Hooks
 
         $current_user_id = get_current_user_id();
         $existing = get_posts([
-            'post_type' => 'customer_group',
+            'post_type' => 'customer_groups',
             'post_status' => 'publish',
             'author' => $current_user_id,
             'numberposts' => 1,
@@ -161,7 +161,7 @@ class Frontend_Hooks
         $current_user_id = get_current_user_id();
 
         $existing = get_posts([
-            'post_type' => 'customer_group',
+            'post_type' => 'customer_groups',
             'post_status' => 'publish',
             'author' => $current_user_id,
             'numberposts' => 1,
@@ -185,7 +185,7 @@ class Frontend_Hooks
         $current_user_id = get_current_user_id();
 
         $existing = get_posts([
-            'post_type' => 'customer_group',
+            'post_type' => 'customer_groups',
             'post_status' => 'publish',
             'author' => $current_user_id,
             'numberposts' => 1,

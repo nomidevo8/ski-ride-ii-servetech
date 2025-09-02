@@ -28,42 +28,43 @@ class Admin_groups_page
     /**
      * Register custom post type for Customer Groups
      */
+
     public function register_customer_groups_post_type()
     {
         $labels = [
-            'name' => __('Customer Groups', 'ski-ride'),
-            'singular_name' => __('Customer Group', 'ski-ride'),
-            'menu_name' => __('Customer Groups', 'ski-ride'),
-            'name_admin_bar' => __('Customer Group', 'ski-ride'),
-            'add_new' => __('Add New', 'ski-ride'),
-            'add_new_item' => __('Add New Group', 'ski-ride'),
-            'new_item' => __('New Group', 'ski-ride'),
-            'edit_item' => __('Edit Group', 'ski-ride'),
-            'view_item' => __('View Group', 'ski-ride'),
-            'all_items' => __('All Groups', 'ski-ride'),
-            'search_items' => __('Search Groups', 'ski-ride'),
-            'not_found' => __('No groups found.', 'ski-ride'),
-            'not_found_in_trash' => __('No groups found in Trash.', 'ski-ride')
+            'name' => __('Customer Groups', 'ski-ride-servetech'),
+            'singular_name' => __('Customer Group', 'ski-ride-servetech'),
+            'menu_name' => __('Customer Groups', 'ski-ride-servetech'),
+            'name_admin_bar' => __('Customer Group', 'ski-ride-servetech'),
+            'add_new' => __('Add New', 'ski-ride-servetech'),
+            'add_new_item' => __('Add New Group', 'ski-ride-servetech'),
+            'new_item' => __('New Group', 'ski-ride-servetech'),
+            'edit_item' => __('Edit Group', 'ski-ride-servetech'),
+            'view_item' => __('View Group', 'ski-ride-servetech'),
+            'all_items' => __('All Groups', 'ski-ride-servetech'),
+            'search_items' => __('Search Groups', 'ski-ride-servetech'),
+            'not_found' => __('No groups found.', 'ski-ride-servetech'),
+            'not_found_in_trash' => __('No groups found in Trash.', 'ski-ride-servetech')
         ];
 
         $args = [
             'labels' => $labels,
-            'public' => false,  // not shown on frontend
-            'show_ui' => true,   // show in admin
-            'show_in_menu' => true,   // show in admin menu
+            'public' => false,
+            'show_ui' => true,
+            'show_in_menu' => true,
             'query_var' => true,
-            'rewrite' => ['slug' => 'customer-group'],
+            'rewrite' => ['slug' => 'ski-group'], 
             'capability_type' => 'post',
             'has_archive' => false,
             'hierarchical' => false,
             'menu_position' => 25,
             'menu_icon' => 'dashicons-groups',
-            'supports' => ['title', 'editor'], 
+            'supports' => ['title', 'custom-fields'],
         ];
 
-        register_post_type('customer_group', $args);
+        // 👇 new post type key
+        register_post_type('customer_groups', $args);
     }
-
 
     /**
      * Register meta box on the Group CPT edit screen
@@ -74,7 +75,7 @@ class Admin_groups_page
             'group_members_meta',
             __('Group Members', 'ski-ride-servetech'),
             [$this, 'render_meta_box'],
-            'customer_group',
+            'customer_groups',
             'normal',
             'default'
         );
@@ -88,8 +89,8 @@ class Admin_groups_page
     {
         // 🔹 Fetch booking info
         $fitting_location = get_post_meta($post->ID, 'fitting_location', true);
-        $fitting_date     = get_post_meta($post->ID, 'fitting_date', true);
-        $last_ski_date    = get_post_meta($post->ID, 'last_ski_date', true);
+        $fitting_date = get_post_meta($post->ID, 'fitting_date', true);
+        $last_ski_date = get_post_meta($post->ID, 'last_ski_date', true);
 
         echo '<h4>' . esc_html__('Booking Details', 'ski-ride-servetech') . '</h4>';
         echo '<table class="widefat striped" style="margin-bottom:20px">';
@@ -133,5 +134,6 @@ class Admin_groups_page
 
         echo '</tbody></table>';
     }
+
 
 }

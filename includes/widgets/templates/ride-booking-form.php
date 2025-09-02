@@ -1,3 +1,65 @@
+<?php
+
+   if (is_user_logged_in()) {
+            $current_user_id = get_current_user_id();
+            $existing = get_posts([
+                'post_type' => 'customer_groups',
+                'post_status' => 'publish',
+                'author' => $current_user_id,
+                'numberposts' => 1,
+            ]);
+
+        if ($existing) {
+            $group_id = $existing[0]->ID;
+            $members = get_post_meta($group_id, 'group_members', true);
+            // echo "<pre>";
+            // print_r($members);
+            // echo "</pre>";
+            // Function to filter items by renting option
+            // 1. Collect all renting options from members
+            $selected_option_indices = [];
+            foreach ($members as $member) {
+                $option_name = $member['renting_option'];
+                $option_index = array_search($option_name, $renting_options);
+                if ($option_index !== false && !in_array($option_index, $selected_option_indices)) {
+                    $selected_option_indices[] = $option_index;
+                }
+            }
+
+        // 2. Filter function
+            function filter_items_by_renting_option($items, $selected_option_indices) {
+                $filtered = [];
+                foreach ($items as $item) {
+                    if (!empty($item['renting_options'])) {
+                        foreach ($item['renting_options'] as $opt_index) {
+                            if (in_array($opt_index, $selected_option_indices)) {
+                                $filtered[] = $item;
+                                break; 
+                            }
+                        }
+                    }
+                }
+                return $filtered;
+            }
+
+
+
+            // 3. Filter all items based on selected options
+            $all_packages = filter_items_by_renting_option($packages, $selected_option_indices);
+            $all_gears = filter_items_by_renting_option($gears, $selected_option_indices);
+            $all_gloves = filter_items_by_renting_option($gloves, $selected_option_indices);
+            $all_goggles = filter_items_by_renting_option($goggles, $selected_option_indices);
+            $all_socks = filter_items_by_renting_option($socks, $selected_option_indices);
+            $all_passes = filter_items_by_renting_option($passes, $selected_option_indices);
+
+        }
+    }
+
+
+
+
+
+?>
 <div class="srs-booking-form">
     <h3 class="srs-form-title"><?php echo esc_html($form_title); ?></h3>
 
@@ -228,7 +290,7 @@
 
             </form>
             <!-- Booking Main Form  -->
-            <form id="srs-main-buying" method="post">
+            <div id="srs-main-buying">
                 <!-- Step 4: Group Overview + Equipment Selection -->
                 <div id="equipment-selection" class="content">
                     <h3 class="text-center mb-4"><?php esc_html_e("SELECT EQUIPMENT", "ski-ride-servetech"); ?></h3>
@@ -237,11 +299,11 @@
                     <div class="row mt-4">
 
                         <!-- Packages -->
-                        <?php if (!empty($AdminSettings['packages'])) : ?>
+                        <?php if (!empty($all_packages)) : ?>
                             <div class="col-12 mb-4">
                                 <h5><?php esc_html_e("Select A Ski Package (Boots Are Included)", "ski-ride-servetech"); ?></h5>
                                 <div class="row">
-                                    <?php foreach ($AdminSettings['packages'] as $package) : ?>
+                                    <?php foreach ($all_packages as $package) : ?>
                                         <div class="col-md-4 mb-3">
                                             <div class="card h-100 border-primary">
                                                 <div class="card-body">
@@ -269,25 +331,45 @@
                             <div class="row">
                                 <div class="col-md-3">
                                     <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="has-boots">
-                                        <label class="form-check-label" for="has-boots"><?php esc_html_e("Has own boots", "ski-ride-servetech"); ?></label>
+                                        <input 
+                                            type="checkbox" 
+                                            class="form-check-input" 
+                                            id="has-boots" 
+                                            data-discount="<?php echo esc_attr($AdminSettings['boots_discount'] ?? 0); ?>"
+                                        >
+                                        <label class="form-check-label" for="has-boots">
+                                            <?php esc_html_e("Has own boots", "ski-ride-servetech"); ?>
+                                        </label>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="include-insurance">
-                                        <label class="form-check-label" for="include-insurance"><?php esc_html_e("Include Insurance", "ski-ride-servetech"); ?></label>
+                                        <input 
+                                            type="checkbox" 
+                                            class="form-check-input" 
+                                            id="include-insurance" 
+                                            data-price="<?php echo esc_attr($AdminSettings['insurance_price'] ?? 0); ?>"
+                                            data-product-id="<?php echo esc_attr($AdminSettings['insurance_product_id'] ?? ''); ?>"
+                                        >
+                                        <label class="form-check-label" for="include-insurance">
+                                            <?php esc_html_e("Include Insurance", "ski-ride-servetech"); ?>
+                                        </label>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="gear-select"><?php esc_html_e("Need to rent other Gear?", "ski-ride-servetech"); ?></label>
                                     <select class="form-select" id="gear-select" name="gear_select">
-                                        <?php foreach($gears as $gear): ?>
-                                            <option value="<?php echo esc_attr($gear['product_id']); ?>">
-                                                <?php echo esc_html($gear['name']); ?>
+                                        <?php foreach ($all_gears as $gear): ?>
+                                            <option 
+                                                value="<?php echo esc_attr($gear['product_id']); ?>"
+                                                data-price="<?php echo esc_attr($gear['price']); ?>"
+                                                data-name="<?php echo esc_attr($gear['name']); ?>"
+                                            >
+                                                <?php echo esc_html($gear['name']); ?> - ₩<?php echo esc_html($gear['price']); ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
+
                                 </div>
                             </div>
                         </div>
@@ -296,12 +378,12 @@
                         <?php
                         $sub_categories = ['gloves', 'goggles', 'socks'];
                         foreach ($sub_categories as $sub) :
-                            if (!empty($AdminSettings[$sub])) :
+                            if (!empty('all_' . $sub)) :
                         ?>
                             <div class="col-12 mb-4">
                                 <h5><?php echo ucfirst($sub); ?> <?php esc_html_e("To Buy And Keep", "ski-ride-servetech"); ?></h5>
                                 <div class="row">
-                                    <?php foreach ($AdminSettings[$sub] as $item) : ?>
+                                    <?php foreach ($$sub as $item) : ?>
                                         <div class="col-md-4 mb-3">
                                             <div class="card h-100 border-info">
                                                 <div class="card-body">
@@ -377,38 +459,53 @@
                     </div>
 
                     <!-- Pass Selection Form -->
-                    <div class="card shadow-sm mx-auto" style="max-width: 400px;">
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">James Parker</label>
-                                <select class="form-select">
-                                    <option><?php esc_html_e("Select Your Age Group", "ski-ride-servetech"); ?></option>
-                                    <option><?php esc_html_e("Adult", "ski-ride-servetech"); ?></option>
-                                    <option><?php esc_html_e("Child", "ski-ride-servetech"); ?></option>
-                                    <option><?php esc_html_e("Senior", "ski-ride-servetech"); ?></option>
-                                </select>
-                            </div>
+                    <?php if (!empty($members)) : ?>
+                        <div class="row">
+                            <?php foreach ($members as $index => $member) : ?>
+                                <div class="col-md-6 col-lg-4"> <!-- adjust column size as needed -->
+                                    <div class="card shadow-sm mb-4 h-100">
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold pass_owner_name">
+                                                    <?php echo esc_html($member['first_name'] . ' ' . $member['last_name']); ?>
+                                                </label>
+                                                <select class="form-select" name="member[<?php echo $index; ?>][age_group]">
+                                                    <option><?php esc_html_e("Select Your Age Group", "ski-ride-servetech"); ?></option>
+                                                    <option value="adult"><?php esc_html_e("Adult", "ski-ride-servetech"); ?></option>
+                                                    <option value="child"><?php esc_html_e("Child", "ski-ride-servetech"); ?></option>
+                                                    <option value="senior"><?php esc_html_e("Senior", "ski-ride-servetech"); ?></option>
+                                                </select>
+                                            </div>
 
-                            <div class="mb-3">
-                                <label class="form-label fw-bold"><?php esc_html_e("Enter Birthday", "ski-ride-servetech"); ?></label>
-                                <input type="date" class="form-control">
-                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold"><?php esc_html_e("Enter Birthday", "ski-ride-servetech"); ?></label>
+                                                <input type="date" class="form-control" name="member[<?php echo $index; ?>][birthday]">
+                                            </div>
 
-                            <div class="mb-3">
-                                <label class="form-label fw-bold"><?php esc_html_e("Select Pass", "ski-ride-servetech"); ?></label>
-                                <select class="form-select">
-                                    <option><?php esc_html_e("Select", "ski-ride-servetech"); ?></option>
-                                    <?php if (!empty($AdminSettings['passes'])) : ?>
-                                        <?php foreach ($AdminSettings['passes'] as $pass) : ?>
-                                            <option value="<?php echo esc_attr($pass['product_id']); ?>">
-                                                <?php echo esc_html($pass['title']); ?> - ₩<?php echo esc_html($pass['price']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold"><?php esc_html_e("Select Pass", "ski-ride-servetech"); ?></label>
+                                                <select class="form-select" name="member[<?php echo $index; ?>][pass_id]">
+                                                    <option><?php esc_html_e("Select", "ski-ride-servetech"); ?></option>
+                                                    <?php if (!empty($AdminSettings['passes'])) : ?>
+                                                        <?php foreach ($AdminSettings['passes'] as $pass) : ?>
+                                                            <option 
+                                                                value="<?php echo esc_attr($pass['product_id']); ?>"
+                                                                data-price="<?php echo esc_attr($pass['price']); ?>"
+                                                                data-title="<?php echo esc_attr($pass['title']); ?>"
+                                                            >
+                                                                <?php echo esc_html($pass['title']); ?> - ₩<?php echo esc_html($pass['price']); ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    <?php endif; ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
-                    </div>
+                    <?php endif; ?>
+
 
                     <!-- Terms Checkbox -->
                     <div class="form-check mt-3 text-center">
@@ -444,23 +541,23 @@
                     <!-- Contact Details -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <input type="text" class="form-control" placeholder="First Name">
+                            <input type="text" class="form-control" id="booking-first-name" placeholder="First Name">
                         </div>
                         <div class="col-md-3">
-                            <input type="text" class="form-control" placeholder="Last Name">
+                            <input type="text" class="form-control"  id="booking-last-name"  placeholder="Last Name">
                         </div>
                         <div class="col-md-3">
-                            <input type="email" class="form-control" placeholder="Email">
+                            <input type="email" class="form-control"  id="booking-email"  placeholder="Email">
                         </div>
                         <div class="col-md-3">
-                            <input type="text" class="form-control" placeholder="Phone Number">
+                            <input type="text" class="form-control"  id="booking-phone-no"  placeholder="Phone Number">
                         </div>
                     </div>
 
                     <!-- How did you hear & delivery details -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <select class="form-select">
+                            <select class="form-select" id="how-did-hear">
                                 <option selected>How Did You Hear About Us?</option>
                                 <option>Google</option>
                                 <option>Friends</option>
@@ -468,20 +565,20 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <input type="text" class="form-control" placeholder="Delivery Location Details">
+                            <input type="text" class="form-control" id="delivery-location" placeholder="Delivery Location Details">
                         </div>
                         <div class="col-md-3">
-                            <input type="text" class="form-control" placeholder="If collection location is different, please enter it here">
+                            <input type="text" class="form-control"  id="collection-location"  placeholder="If collection location is different, please enter it here">
                         </div>
                     </div>
 
                     <!-- Promo Code & Comments -->
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <input type="text" class="form-control" placeholder="I Have A Promo Code">
+                            <input type="text" class="form-control" id="promo-code" placeholder="I Have A Promo Code">
                         </div>
                         <div class="col-md-6">
-                            <input type="text" class="form-control" placeholder="Other Comments/Instruction?">
+                            <input type="text" class="form-control" id="other-comment" placeholder="Other Comments/Instruction?">
                         </div>
                     </div>
 
@@ -553,11 +650,11 @@
                     <!-- Footer Buttons -->
                     <div class="d-flex justify-content-between">
                         <button type="button" class="btn btn-secondary">Back</button>
-                        <button type="button" class="btn btn-warning fw-bold">PAYMENT</button>
+                        <button type="button" class="btn btn-warning fw-bold go-to-payment">PAYMENT</button>
                     </div>
                 </div>
 
-            </form>
+            </div>
         </div>
     </div>
 </div>
@@ -576,6 +673,8 @@ jQuery(document).ready(function($) {
                 animation: true
             });
             groupData = response.data;
+            console.log(groupData);
+
             stepper.to(3); 
             $('#group-members-list').html(response.data.html);
         }
@@ -691,29 +790,347 @@ jQuery(document).ready(function($) {
         });
     });
 
-
-    $('#packages-button').on('click', function(e) {
+    $("#packages-button").on("click", function(e) {
         e.preventDefault();
-        var chosed_package_step = $('#srs-main-buying');
 
-        var formData = $(chosed_package_step).serialize();
-        console.log('Serialized formData:', formData);
-
-        // Optional: convert to an object for easier reading
-        var formDataObj = $(chosed_package_step).serializeArray().reduce(function(obj, item) {
-            if (obj[item.name]) {
-                // If multiple values for same name, convert to array
-                if (!Array.isArray(obj[item.name])) {
-                    obj[item.name] = [obj[item.name]];
-                }
-                obj[item.name].push(item.value);
-            } else {
-                obj[item.name] = item.value;
+        let selectedData = {
+            packages: [],
+            gears: [],
+            gloves: [],
+            goggles: [],
+            socks: [],
+            passes: [],
+            options: {
+                has_own_boots: $("#has-boots").is(":checked"),
+                boots_discount: parseFloat($("#has-boots").data("discount") || 0),
+                insurance: $("#include-insurance").is(":checked"),
+                insurance_price: parseFloat($("#include-insurance").data("price") || 0),
+                insurance_product_id: $("#include-insurance").data("product-id") || ''
             }
-            return obj;
-        }, {});
-        console.log('Form data object:', formDataObj);
+        };
+
+        // ---- Packages ----
+        $("input[name='packages']:checked").each(function() {
+            let productId = $(this).attr("id").replace("pkg_", "");
+            let card = $(this).closest(".card");
+
+            selectedData.packages.push({
+                name: card.find("h6").text().trim(),
+                price: card.find(".card-footer strong").text().replace("₩", "").replace("/ Day", "").trim(),
+                product_id: productId
+            });
+        });
+
+        // ---- Gear (single select) ----
+        let gearSelect = $("#gear-select").val();
+        if (gearSelect) {
+            let option = $("#gear-select option:selected");
+            selectedData.gears.push({
+                name: option.data("name"),
+                price: option.data("price"),
+                product_id: gearSelect
+            });
+        }
+
+        // ---- Gloves / Goggles / Socks ----
+        ["gloves", "goggles", "socks"].forEach(sub => {
+            $(`input[id^='${sub}_']:checked`).each(function() {
+                let productId = $(this).attr("id").split("_")[1];
+                let card = $(this).closest(".card");
+
+                selectedData[sub].push({
+                    name: card.find("h6").text().trim(),
+                    price: card.find(".card-footer strong").text().replace("₩", "").trim(),
+                    product_id: productId
+                });
+            });
+        });
+
+        // ---- Passes (per member) ----
+        selectedData.passes = [];
+        $("#lift-pass-selection .card").each(function() {
+            let memberName = $(this).find(".pass_owner_name").text().trim();
+            let ageGroup = $(this).find("select[name*='[age_group]']").val();
+            let birthday = $(this).find("input[type='date']").val();
+            let passSelect = $(this).find("select[name*='[pass_id]']").val();
+            let passOption = $(this).find("select[name*='[pass_id]'] option:selected");
+
+            selectedData.passes.push({
+                member: memberName,
+                age_group: ageGroup,
+                birthday: birthday,
+                pass: passSelect ? {
+                    title: passOption.data("title"),
+                    price: passOption.data("price"),
+                    product_id: passSelect
+                } : null
+            });
+        });
+
+        renderBookingSummary(selectedData);
+        stepper.to(6)
     });
+
+
+    // ---- Fill Booking Summary Table ----
+    function renderBookingSummary(data) {
+        console.log("data", data);
+        let tbody = $("#booking-step table tbody");
+        tbody.empty(); 
+
+        let total = 0;
+        let fitting_date = groupData.fitting_date;   
+        let last_ski_date = groupData.last_ski_date; 
+
+        // Convert strings to Date objects
+        let fittingDateObj = new Date(fitting_date);
+        let lastSkiDateObj = new Date(last_ski_date);
+
+        // Calculate difference in milliseconds
+        let diffTime = Math.abs(lastSkiDateObj - fittingDateObj);
+
+        // Convert to days
+        let days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        let totalBootsDiscount = 0;
+        // loop through members
+        data.passes.forEach(member => {
+            let memberTotal = 0;
+            // header row for member
+            tbody.append(`
+                <tr class="table-secondary">
+                    <td colspan="5"><strong>${member.member}</strong> (${member.age_group}, ${member.birthday})</td>
+                </tr>
+            `);
+
+            // package(s) for this member
+            if (data.packages && data.packages.length) {
+                data.packages.forEach(pkg => {
+                    let cost = parseFloat(pkg.price) * days;
+                    memberTotal += cost;
+                    tbody.append(`
+                        <tr>
+                            <td></td>
+                            <td>${pkg.name}</td>
+                            <td>₩${pkg.price}</td>
+                            <td>${days} Days</td>
+                            <td>₩${cost.toLocaleString()}</td>
+                        </tr>
+                    `);
+                });
+            }
+
+            // gear(s)
+            if (data.gears && data.gears.length > 0) {
+                data.gears.forEach(gear => {
+                    let cost = parseFloat(gear.price) * days;
+                    memberTotal += cost;
+                    tbody.append(`
+                        <tr>
+                            <td></td>
+                            <td>${gear.name}</td>
+                            <td>₩${gear.price}</td>
+                            <td>${days} Days</td>
+                            <td>₩${cost.toLocaleString()}</td>
+                        </tr>
+                    `);
+                });
+            }
+
+            // gloves / goggles / socks
+            ["gloves", "goggles", "socks"].forEach(sub => {
+                if (data[sub] && data[sub].length > 0) {
+                    data[sub].forEach(item => {
+                        let cost = parseFloat(item.price);
+                        memberTotal += cost;
+                        tbody.append(`
+                            <tr>
+                                <td></td>
+                                <td>${item.name}</td>
+                                <td>₩${item.price}</td>
+                                <td>-</td>
+                                <td>₩${cost.toLocaleString()}</td>
+                            </tr>
+                        `);
+                    });
+                }
+            });
+
+            // Optional Pass (only if selected)
+            if (member.pass && !isNaN(parseFloat(member.pass.price))) {
+                let cost = parseFloat(member.pass.price);
+                memberTotal += cost;
+
+                tbody.append(`
+                    <tr>
+                        <td></td>
+                        <td>${member.pass.title || 'Pass'}</td>
+                        <td>₩${cost.toLocaleString()}</td>
+                        <td>-</td>
+                        <td>₩${cost.toLocaleString()}</td>
+                    </tr>
+                `);
+            }
+
+            // Options (Insurance / Own Boots)
+            if (data.options.insurance) {
+                let insurancePrice = parseFloat(data.options.insurance_price || 0);
+                memberTotal += insurancePrice * days;
+                tbody.append(`
+                    <tr>
+                        <td></td>
+                        <td>Insurance</td>
+                        <td>₩${insurancePrice}</td>
+                        <td>${days} Days</td>
+                        <td>₩${(insurancePrice * days).toLocaleString()}</td>
+                    </tr>
+                `);
+            }
+
+            if (data.options.has_own_boots) {
+                let discountPerDay = parseFloat(data.options.boots_discount || 0);
+                let bootsDiscount = discountPerDay * days;
+                memberTotal -= bootsDiscount;
+                totalBootsDiscount += bootsDiscount;
+
+
+                if (bootsDiscount > 0) {
+                    tbody.append(`
+                        <tr>
+                            <td></td>
+                            <td>Boots Discount Applied</td>
+                            <td>-₩${discountPerDay.toLocaleString()}</td>
+                            <td>${days} Days</td>
+                            <td>-₩${bootsDiscount.toLocaleString()}</td>
+                        </tr>
+                    `);
+                }
+            }
+
+            // Subtotal per member
+            tbody.append(`
+                <tr class="fw-bold border-top">
+                    <td colspan="4" class="text-end">Subtotal for ${member.member}</td>
+                    <td>₩${memberTotal.toLocaleString()}</td>
+                </tr>
+            `);
+
+            total += memberTotal;
+        });
+
+        // ---- Grand total row ----
+        tbody.append(`
+            <tr class="fw-bold table-dark">
+                <td colspan="4" class="text-end">Grand Total</td>
+                <td>₩${total.toLocaleString()}</td>
+            </tr>
+        `);
+        // ---- Update deposit section ----
+        $("#fullPayment + label").text("₩" + total.toLocaleString());
+        $("#depositPayment + label").text("₩" + (total * 0.1).toLocaleString());
+
+
+
+        // Last Step Jquery 
+
+        $("#booking-step .go-to-payment").on("click", function(e) {
+            e.preventDefault();
+            let bookingData = {
+                customer: {
+                    first_name: $("#booking-first-name").val(),
+                    last_name: $("#booking-last-name").val(),
+                    email: $("#booking-email").val(),
+                    phone: $("#booking-phone-no").val(),
+                    delivery_address: $("#delivery-location").val(),
+                    collection_address: $("#collection-location").val(),
+                    hear_about: $("#how-did-hear").val(),
+                    promo_code: $("#promo-code").val(),
+                    comments: $("#other-comment").val(),
+                    marketing_optin: $("#marketingOptin").is(":checked")
+                },
+                payment_type: $("#fullPayment").is(":checked") ? "full" : "deposit",
+                rental_days: days,
+                products: [] 
+            };
+
+            // Example: add packages
+            data.packages.forEach(pkg => {
+                if (!isNaN(parseFloat(pkg.price))) {
+                    bookingData.products.push({
+                        product_id: pkg.product_id,
+                        name: pkg.name,
+                        quantity: data.passes.length, 
+                        price: pkg.price
+                    });
+                }
+            });
+
+            // Add gears, gloves, goggles, socks
+            ["gears","gloves","goggles","socks"].forEach(type => {
+                data[type].forEach(item => {
+                    if (!isNaN(parseFloat(item.price))) {
+                        bookingData.products.push({
+                            product_id: item.product_id,
+                            name: item.name,
+                            quantity: data.passes.length, 
+                            price: item.price
+                        });
+                    }
+                });
+            });
+
+            // Add passes
+            data.passes.forEach(member => {
+                if (member.pass && !isNaN(parseFloat(member.pass.price))) {
+                    bookingData.products.push({
+                        product_id: member.pass.product_id,
+                        name: member.pass.title,
+                        quantity: data.passes.length, 
+                        price: member.pass.price
+                    });
+                }
+            });
+
+            // Add options
+            if (data.options.insurance && !isNaN(parseFloat(data.options.insurance_price))) {
+                bookingData.products.push({
+                    product_id: data.options.insurance_product_id,
+                    name: "Insurance",
+                    quantity: data.passes.length, 
+                    price: data.options.insurance_price
+                });
+            }
+
+
+            if(data.options.has_own_boots){
+               bookingData.boots_discount = totalBootsDiscount;
+            }
+            console.log('bookingData' , bookingData);
+            $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                method: 'POST',
+                data: {
+                    action: 'srs_add_rental_to_cart',
+                    booking_data: bookingData
+                },
+                success: function (res) {
+                    if (res.success && res.data.redirect) {
+                        // Redirect to checkout
+                        window.location.href = res.data.redirect;
+                    } else {
+                        alert('Product added to cart!');
+                        console.log(res);
+                        $(document.body).trigger('wc_fragment_refresh');
+                    }
+                },
+                error: function (err) {
+                    console.error(err);
+                }
+            });
+        });
+
+    }
+
+
 
 
 });

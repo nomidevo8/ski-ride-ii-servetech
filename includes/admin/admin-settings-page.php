@@ -87,6 +87,21 @@ class Admin_settings_page
             }
         }
 
+        // 🔹 Insurance & Boots Discount
+        $output['insurance_price'] = !empty($input['insurance_price']) ? floatval($input['insurance_price']) : 0;
+        if ($output['insurance_price'] > 0) {
+            $insurance_item = [
+                'name' => 'Insurance',
+                'price' => $output['insurance_price'],
+            ];
+            $output['insurance_product_id'] = $this->sync_woocommerce_product('insurance', $insurance_item);
+        }
+
+        // 🔹 Boots Discount (always just stored, applied as fee)
+        $output['boots_discount'] = !empty($input['boots_discount']) ? floatval($input['boots_discount']) : 0;
+
+
+
         // Gear Types Configuration
         $gear_types = [
             'packages' => ['name', 'price', 'desc', 'product_id'],
@@ -107,14 +122,22 @@ class Admin_settings_page
                 $prices = $input[$gear_type]['price'] ?? [];
                 $descs = $input[$gear_type]['desc'] ?? [];
                 $product_ids = $input[$gear_type]['product_id'] ?? [];
+                $renting_options = $input[$gear_type]['renting_options'] ?? [];
 
-                $count = max(count($names_or_titles), count($prices), count($descs), count($product_ids));
+                $count = max(
+                    count($names_or_titles),
+                    count($prices),
+                    count($descs),
+                    count($product_ids),
+                    count($renting_options)
+                );
 
                 for ($i = 0; $i < $count; $i++) {
                     $title = $names_or_titles[$i] ?? '';
                     $price = $prices[$i] ?? 0;
                     $desc = $descs[$i] ?? '';
                     $product_id = $product_ids[$i] ?? 0;
+                    $rent_option = $renting_options[$i] ?? [];
 
                     // Skip completely empty rows
                     if (empty($title) && empty($price) && empty($desc)) {
@@ -125,6 +148,7 @@ class Admin_settings_page
                         $main_key => sanitize_text_field($title),
                         'price' => floatval($price),
                         'product_id' => intval($product_id),
+                        'renting_options' => is_array($rent_option) ? array_map('sanitize_text_field', $rent_option) : [],
                     ];
 
                     if (in_array('desc', $keys)) {
@@ -142,10 +166,12 @@ class Admin_settings_page
         return $output;
     }
 
+
     /**
      * Sync a gear item with WooCommerce product
      */
-    private function sync_woocommerce_product($gear_type, $item) {
+    private function sync_woocommerce_product($gear_type, $item)
+    {
         if (!class_exists('WC_Product')) {
             return 0; // WooCommerce not active
         }
@@ -163,7 +189,7 @@ class Admin_settings_page
             $product = wc_get_product($product_id);
             if ($product) {
                 $product->set_regular_price($item['price']);
-                if ($gear_type === 'packages') {
+                if (in_array($gear_type, ['packages', 'gears', 'insurance'])) {
                     update_post_meta($product_id, 'is_rental', 'yes');
                 }
                 $product->save();
@@ -175,7 +201,7 @@ class Admin_settings_page
             $product->set_regular_price($item['price']);
             $product->save();
             $product_id = $product->get_id();
-            if ($gear_type === 'packages') {
+            if (in_array($gear_type, ['packages', 'gears', 'insurance'])) {
                 update_post_meta($product_id, 'is_rental', 'yes');
             }
         }
@@ -190,7 +216,6 @@ class Admin_settings_page
         // echo "<pre>";
         // print_r($options);
         // echo "</pre>";
-
         ?>
         <div class="wrap bootstrap-wrapper">
             <h1><?php _e('Ski Ride Form Settings', 'ski-ride-servetech'); ?></h1>
@@ -217,6 +242,10 @@ class Admin_settings_page
                             href="#tab-socks"><?php _e('Socks', 'ski-ride-servetech'); ?></a></li>
                     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
                             href="#tab-passes"><?php _e('Passes', 'ski-ride-servetech'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
+                            href="#tab-insurance"><?php _e('Insurance', 'ski-ride-servetech'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab"
+                            href="#tab-boots"><?php _e('Boots Discount', 'ski-ride-servetech'); ?></a></li>
                 </ul>
 
                 <div class="tab-content">
@@ -299,7 +328,7 @@ class Admin_settings_page
                             <?php _e('Add Renting Option', 'ski-ride-servetech'); ?></button>
                     </div>
 
-                    
+
                     <!-- PACKAGES -->
                     <div class="tab-pane fade" id="tab-packages">
                         <h4><?php _e('Packages', 'ski-ride-servetech'); ?></h4>
@@ -309,12 +338,15 @@ class Admin_settings_page
                                     <th><?php _e('Name', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Description', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Assign Renting Options', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php $packages = $options['packages'] ?? [];
-                                foreach ($packages as $package) { ?>
+                                <?php
+                                $packages = $options['packages'] ?? [];
+                                $renting_options = $options['renting_options'] ?? [];
+                                foreach ($packages as $i => $package) { ?>
                                     <tr>
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[packages][name][]"
@@ -325,6 +357,22 @@ class Admin_settings_page
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[packages][desc][]"
                                                 value="<?php echo esc_attr($package['desc'] ?? ''); ?>"></td>
+
+                                        <!-- Multi-select renting options -->
+                                        <td>
+                                            <select
+                                                name="<?php echo $this->option_key; ?>[packages][renting_options][<?php echo $i; ?>][]"
+                                                class="form-control" multiple>
+                                                <?php foreach ($renting_options as $rIndex => $renting) {
+                                                    $selected = in_array($rIndex, $package['renting_options'] ?? []) ? 'selected' : '';
+                                                    ?>
+                                                    <option value="<?php echo $rIndex; ?>" <?php echo $selected; ?>>
+                                                        <?php echo esc_html($renting); ?>
+                                                    </option>
+                                                <?php } ?>
+                                            </select>
+                                        </td>
+
                                         <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
                                     </tr>
                                 <?php } ?>
@@ -342,12 +390,14 @@ class Admin_settings_page
                                 <tr>
                                     <th><?php _e('Gear Name', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Assign Renting Options', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php $gears = $options['gears'] ?? [];
-                                foreach ($gears as $gear) { ?>
+                                $renting_options = $options['renting_options'] ?? ['Option 1', 'Option 2', 'Option 3'];
+                                foreach ($gears as $i => $gear) { ?>
                                     <tr>
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[gears][name][]"
@@ -355,6 +405,16 @@ class Admin_settings_page
                                         <td><input type="number" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[gears][price][]"
                                                 value="<?php echo esc_attr($gear['price'] ?? ''); ?>"></td>
+                                        <td>
+                                            <select
+                                                name="<?php echo $this->option_key; ?>[gears][renting_options][<?php echo $i; ?>][]"
+                                                class="form-control" multiple>
+                                                <?php foreach ($renting_options as $rIndex => $rName) {
+                                                    $selected = in_array($rIndex, $gear['renting_options'] ?? []) ? 'selected' : '';
+                                                    echo "<option value='{$rIndex}' {$selected}>" . esc_html($rName) . "</option>";
+                                                } ?>
+                                            </select>
+                                        </td>
                                         <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
                                     </tr>
                                 <?php } ?>
@@ -363,7 +423,6 @@ class Admin_settings_page
                         <button type="button" class="btn btn-success add-row" data-field="gears">+
                             <?php _e('Add Gear', 'ski-ride-servetech'); ?></button>
                     </div>
-
 
                     <!-- GLOVES -->
                     <div class="tab-pane fade" id="tab-gloves">
@@ -374,12 +433,13 @@ class Admin_settings_page
                                     <th><?php _e('Name', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Description', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Assign Renting Options', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php $gloves = $options['gloves'] ?? [];
-                                foreach ($gloves as $glove) { ?>
+                                foreach ($gloves as $i => $glove) { ?>
                                     <tr>
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[gloves][name][]"
@@ -390,6 +450,16 @@ class Admin_settings_page
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[gloves][desc][]"
                                                 value="<?php echo esc_attr($glove['desc'] ?? ''); ?>"></td>
+                                        <td>
+                                            <select
+                                                name="<?php echo $this->option_key; ?>[gloves][renting_options][<?php echo $i; ?>][]"
+                                                class="form-control" multiple>
+                                                <?php foreach ($renting_options as $rIndex => $rName) {
+                                                    $selected = in_array($rIndex, $glove['renting_options'] ?? []) ? 'selected' : '';
+                                                    echo "<option value='{$rIndex}' {$selected}>" . esc_html($rName) . "</option>";
+                                                } ?>
+                                            </select>
+                                        </td>
                                         <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
                                     </tr>
                                 <?php } ?>
@@ -408,12 +478,13 @@ class Admin_settings_page
                                     <th><?php _e('Name', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Description', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Assign Renting Options', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php $goggles = $options['goggles'] ?? [];
-                                foreach ($goggles as $goggle) { ?>
+                                foreach ($goggles as $i => $goggle) { ?>
                                     <tr>
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[goggles][name][]"
@@ -424,6 +495,16 @@ class Admin_settings_page
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[goggles][desc][]"
                                                 value="<?php echo esc_attr($goggle['desc'] ?? ''); ?>"></td>
+                                        <td>
+                                            <select
+                                                name="<?php echo $this->option_key; ?>[goggles][renting_options][<?php echo $i; ?>][]"
+                                                class="form-control" multiple>
+                                                <?php foreach ($renting_options as $rIndex => $rName) {
+                                                    $selected = in_array($rIndex, $goggle['renting_options'] ?? []) ? 'selected' : '';
+                                                    echo "<option value='{$rIndex}' {$selected}>" . esc_html($rName) . "</option>";
+                                                } ?>
+                                            </select>
+                                        </td>
                                         <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
                                     </tr>
                                 <?php } ?>
@@ -442,12 +523,13 @@ class Admin_settings_page
                                     <th><?php _e('Name', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Description', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Assign Renting Options', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php $socks = $options['socks'] ?? [];
-                                foreach ($socks as $sock) { ?>
+                                foreach ($socks as $i => $sock) { ?>
                                     <tr>
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[socks][name][]"
@@ -458,6 +540,16 @@ class Admin_settings_page
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[socks][desc][]"
                                                 value="<?php echo esc_attr($sock['desc'] ?? ''); ?>"></td>
+                                        <td>
+                                            <select
+                                                name="<?php echo $this->option_key; ?>[socks][renting_options][<?php echo $i; ?>][]"
+                                                class="form-control" multiple>
+                                                <?php foreach ($renting_options as $rIndex => $rName) {
+                                                    $selected = in_array($rIndex, $sock['renting_options'] ?? []) ? 'selected' : '';
+                                                    echo "<option value='{$rIndex}' {$selected}>" . esc_html($rName) . "</option>";
+                                                } ?>
+                                            </select>
+                                        </td>
                                         <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
                                     </tr>
                                 <?php } ?>
@@ -467,7 +559,6 @@ class Admin_settings_page
                             <?php _e('Add Sock', 'ski-ride-servetech'); ?></button>
                     </div>
 
-
                     <!-- PASSES -->
                     <div class="tab-pane fade" id="tab-passes">
                         <h4><?php _e('Passes', 'ski-ride-servetech'); ?></h4>
@@ -476,12 +567,13 @@ class Admin_settings_page
                                 <tr>
                                     <th><?php _e('Title', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Assign Renting Options', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php $passes = $options['passes'] ?? [];
-                                foreach ($passes as $pass) { ?>
+                                foreach ($passes as $i => $pass) { ?>
                                     <tr>
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[passes][title][]"
@@ -489,6 +581,16 @@ class Admin_settings_page
                                         <td><input type="number" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[passes][price][]"
                                                 value="<?php echo esc_attr($pass['price'] ?? ''); ?>"></td>
+                                        <td>
+                                            <select
+                                                name="<?php echo $this->option_key; ?>[passes][renting_options][<?php echo $i; ?>][]"
+                                                class="form-control" multiple>
+                                                <?php foreach ($renting_options as $rIndex => $rName) {
+                                                    $selected = in_array($rIndex, $pass['renting_options'] ?? []) ? 'selected' : '';
+                                                    echo "<option value='{$rIndex}' {$selected}>" . esc_html($rName) . "</option>";
+                                                } ?>
+                                            </select>
+                                        </td>
                                         <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
                                     </tr>
                                 <?php } ?>
@@ -497,6 +599,50 @@ class Admin_settings_page
                         <button type="button" class="btn btn-success add-row" data-field="passes">+
                             <?php _e('Add Pass', 'ski-ride-servetech'); ?></button>
                     </div>
+
+                    <!-- INSURANCE -->
+                    <div class="tab-pane fade" id="tab-insurance">
+                        <h4><?php _e('Insurance Settings', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Insurance Price (per day)', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <input type="number" step="0.01" class="form-control"
+                                            name="<?php echo $this->option_key; ?>[insurance_price]"
+                                            value="<?php echo esc_attr($options['insurance_price'] ?? ''); ?>">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- BOOTS DISCOUNT -->
+                    <div class="tab-pane fade" id="tab-boots">
+                        <h4><?php _e('Boots Discount Settings', 'ski-ride-servetech'); ?></h4>
+                        <table class="table table-bordered align-middle">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Boots Discount (per day)', 'ski-ride-servetech'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <input type="number" step="0.01" class="form-control"
+                                            name="<?php echo $this->option_key; ?>[boots_discount]"
+                                            value="<?php echo esc_attr($options['boots_discount'] ?? ''); ?>">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+
 
                 </div>
 
@@ -507,39 +653,54 @@ class Admin_settings_page
         <!-- Dynamic Row Script -->
         <script>
             jQuery(document).ready(function ($) {
+                // 🔹 Make renting options available to JS
+                let rentingOptions = <?php echo json_encode($options['renting_options'] ?? []); ?>;
+
                 $(".add-row").on("click", function () {
                     let field = $(this).data("field");
                     let table = $(".repeater-table[data-field='" + field + "'] tbody");
 
                     let row = "";
+
+                    // 🔹 Build renting options select HTML
+                    let selectHtml = "<select class='form-control' multiple name='<?php echo $this->option_key; ?>[" + field + "][renting_options][]'>";
+                    $.each(rentingOptions, function (index, name) {
+                        selectHtml += "<option value='" + index + "'>" + name + "</option>";
+                    });
+                    selectHtml += "</select>";
+
                     if (["packages", "gloves", "goggles", "socks"].includes(field)) {
                         row = `<tr>
-                        <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][name][]" placeholder="Name"></td>
-                        <td><input type="number" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][price][]" placeholder="Price"></td>
-                        <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][desc][]" placeholder="Description"></td>
-                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
-                    </tr>`;
+                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][name][]" placeholder="Name"></td>
+                            <td><input type="number" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][price][]" placeholder="Price"></td>
+                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][desc][]" placeholder="Description"></td>
+                            <td>${selectHtml}</td>
+                            <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                        </tr>`;
                     } else if (field === "passes" || field === "gears") {
                         row = `<tr>
-                        <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[passes][title][]" placeholder="Pass Title"></td>
-                        <td><input type="number" class="form-control" name="<?php echo $this->option_key; ?>[passes][price][]" placeholder="Price"></td>
-                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
-                    </tr>`;
+                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][title][]" placeholder="Title"></td>
+                            <td><input type="number" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][price][]" placeholder="Price"></td>
+                            <td>${selectHtml}</td>
+                            <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                        </tr>`;
                     } else {
                         row = `<tr>
-                        <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][]" placeholder="Enter value"></td>
-                        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
-                    </tr>`;
+                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][]" placeholder="Enter value"></td>
+                            <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                        </tr>`;
                     }
 
                     table.append(row);
                 });
 
+                // 🔹 Remove row
                 $(document).on("click", ".remove-row", function () {
                     $(this).closest("tr").remove();
                 });
             });
         </script>
+
         <?php
     }
 
