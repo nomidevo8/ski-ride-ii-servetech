@@ -89,10 +89,12 @@ class Admin_settings_page
 
         // 🔹 Insurance & Boots Discount
         $output['insurance_price'] = !empty($input['insurance_price']) ? floatval($input['insurance_price']) : 0;
+        $insurance_product_id      = !empty($input['insurance_product_id']) ? intval($input['insurance_product_id']) : 0;
         if ($output['insurance_price'] > 0) {
             $insurance_item = [
                 'name' => 'Insurance',
                 'price' => $output['insurance_price'],
+                'product_id' => $insurance_product_id,
             ];
             $output['insurance_product_id'] = $this->sync_woocommerce_product('insurance', $insurance_item);
         }
@@ -121,7 +123,7 @@ class Admin_settings_page
                 $names_or_titles = $input[$gear_type][$main_key] ?? [];
                 $prices = $input[$gear_type]['price'] ?? [];
                 $descs = $input[$gear_type]['desc'] ?? [];
-                $product_ids = $input[$gear_type]['product_id'] ?? [];
+                $product_ids     = $input[$gear_type]['product_id'] ?? [];
                 $renting_options = $input[$gear_type]['renting_options'] ?? [];
 
                 $count = max(
@@ -168,7 +170,7 @@ class Admin_settings_page
 
 
     /**
-     * Sync a gear item with WooCommerce product
+     * 🔹 Sync a gear item with WooCommerce product
      */
     private function sync_woocommerce_product($gear_type, $item)
     {
@@ -177,45 +179,59 @@ class Admin_settings_page
         }
 
         $product_name = $item['name'] ?? $item['title'] ?? '';
+        $price        = $item['price'] ?? 0;
+        $product_id   = intval($item['product_id'] ?? 0);
+
         if (empty($product_name)) {
             return 0;
         }
 
-        // Check if product already exists
-        $existing = get_page_by_title($product_name, OBJECT, 'product');
+        // Try to load by provided product_id first
+        $product = $product_id ? wc_get_product($product_id) : false;
 
-        if ($existing) {
-            $product_id = $existing->ID;
-            $product = wc_get_product($product_id);
-            if ($product) {
-                $product->set_regular_price($item['price']);
-                if (in_array($gear_type, ['packages', 'gears', 'insurance'])) {
-                    update_post_meta($product_id, 'is_rental', 'yes');
-                }
-                $product->save();
-            }
-        } else {
-            // Create new WooCommerce product
-            $product = new \WC_Product_Simple();
-            $product->set_name($product_name);
-            $product->set_regular_price($item['price']);
-            $product->save();
-            $product_id = $product->get_id();
-            if (in_array($gear_type, ['packages', 'gears', 'insurance'])) {
-                update_post_meta($product_id, 'is_rental', 'yes');
+        // If no valid product, try finding by title
+        if (!$product) {
+            $existing = get_page_by_title($product_name, OBJECT, 'product');
+            if ($existing) {
+                $product_id = $existing->ID;
+                $product    = wc_get_product($product_id);
             }
         }
 
-        return $product_id;
+        if ($product) {
+            // Update existing product
+            $product->set_regular_price($price);
+            $product->set_name($product_name);
+            $product->set_catalog_visibility('hidden'); 
+            if (in_array($gear_type, ['packages', 'gears', 'insurance'])) {
+                update_post_meta($product->get_id(), 'is_rental', 'yes');
+            }
+            $product->save();
+            return $product->get_id();
+        } else {
+            // Create new product
+            $new_product = new \WC_Product_Simple();
+            $new_product->set_name($product_name);
+            $new_product->set_regular_price($price);
+            $new_product->set_catalog_visibility('hidden'); 
+            $new_product->save();   
+            $new_product_id = $new_product->get_id();
+
+            if (in_array($gear_type, ['packages', 'gears', 'insurance'])) {
+                update_post_meta($new_product_id, 'is_rental', 'yes');
+            }
+
+            return $new_product_id;
+        }
     }
 
 
     public function render_settings_page()
     {
         $options = get_option($this->option_key, []);
-        // echo "<pre>";
-        // print_r($options);
-        // echo "</pre>";
+        echo "<pre>";
+        print_r($options);
+        echo "</pre>";
         ?>
         <div class="wrap bootstrap-wrapper">
             <h1><?php _e('Ski Ride Form Settings', 'ski-ride-servetech'); ?></h1>
@@ -357,7 +373,9 @@ class Admin_settings_page
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[packages][desc][]"
                                                 value="<?php echo esc_attr($package['desc'] ?? ''); ?>"></td>
-
+                                        <input type="hidden"
+                                            name="<?php echo $this->option_key; ?>[packages][product_id][]"
+                                            value="<?php echo esc_attr($package['product_id'] ?? 0); ?>">
                                         <!-- Multi-select renting options -->
                                         <td>
                                             <select
@@ -405,6 +423,8 @@ class Admin_settings_page
                                         <td><input type="number" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[gears][price][]"
                                                 value="<?php echo esc_attr($gear['price'] ?? ''); ?>"></td>
+                                        <input type="hidden" name="<?php echo $this->option_key; ?>[gears][product_id][]"
+                                            value="<?php echo esc_attr($gear['product_id'] ?? 0); ?>">
                                         <td>
                                             <select
                                                 name="<?php echo $this->option_key; ?>[gears][renting_options][<?php echo $i; ?>][]"
@@ -450,6 +470,8 @@ class Admin_settings_page
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[gloves][desc][]"
                                                 value="<?php echo esc_attr($glove['desc'] ?? ''); ?>"></td>
+                                        <input type="hidden" name="<?php echo $this->option_key; ?>[gloves][product_id][]"
+                                            value="<?php echo esc_attr($glove['product_id'] ?? 0); ?>">                                                
                                         <td>
                                             <select
                                                 name="<?php echo $this->option_key; ?>[gloves][renting_options][<?php echo $i; ?>][]"
@@ -495,6 +517,8 @@ class Admin_settings_page
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[goggles][desc][]"
                                                 value="<?php echo esc_attr($goggle['desc'] ?? ''); ?>"></td>
+                                        <input type="hidden" name="<?php echo $this->option_key; ?>[goggles][product_id][]"
+                                            value="<?php echo esc_attr($goggle['product_id'] ?? 0); ?>">                                                
                                         <td>
                                             <select
                                                 name="<?php echo $this->option_key; ?>[goggles][renting_options][<?php echo $i; ?>][]"
@@ -540,6 +564,8 @@ class Admin_settings_page
                                         <td><input type="text" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[socks][desc][]"
                                                 value="<?php echo esc_attr($sock['desc'] ?? ''); ?>"></td>
+                                        <input type="hidden" name="<?php echo $this->option_key; ?>[socks][product_id][]"
+                                            value="<?php echo esc_attr($sock['product_id'] ?? 0); ?>">
                                         <td>
                                             <select
                                                 name="<?php echo $this->option_key; ?>[socks][renting_options][<?php echo $i; ?>][]"
@@ -581,6 +607,8 @@ class Admin_settings_page
                                         <td><input type="number" class="form-control"
                                                 name="<?php echo $this->option_key; ?>[passes][price][]"
                                                 value="<?php echo esc_attr($pass['price'] ?? ''); ?>"></td>
+                                        <input type="hidden" name="<?php echo $this->option_key; ?>[passes][product_id][]"
+                                            value="<?php echo esc_attr($pass['product_id'] ?? 0); ?>">
                                         <td>
                                             <select
                                                 name="<?php echo $this->option_key; ?>[passes][renting_options][<?php echo $i; ?>][]"
@@ -615,6 +643,9 @@ class Admin_settings_page
                                         <input type="number" step="0.01" class="form-control"
                                             name="<?php echo $this->option_key; ?>[insurance_price]"
                                             value="<?php echo esc_attr($options['insurance_price'] ?? ''); ?>">
+                                        <input type="hidden"
+                                            name="<?php echo $this->option_key; ?>[insurance_product_id][]"
+                                            value="<?php echo esc_attr($options['insurance_product_id'] ?? 0); ?>">
                                     </td>
                                 </tr>
                             </tbody>

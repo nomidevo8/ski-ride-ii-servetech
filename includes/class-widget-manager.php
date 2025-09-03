@@ -52,6 +52,32 @@ class Widget_Manager
             true
         );
         wp_enqueue_script('srs-script', SRS_PLUGIN_URL . 'assets/js/script.js', ['jquery', 'jquery-steps'], time(), true);
+
+        // Loader 
+        wp_enqueue_script(
+            'ski-loader',
+            'https://cdn.jsdelivr.net/npm/notiflix',
+            [],
+            '1.7.0',
+            true
+        );
+
+        // Date Picker 
+        wp_enqueue_style(
+            'ski-flatepicker-css',
+            'https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css',
+            [],
+            '1.7.0'
+        );
+
+        wp_enqueue_script(
+            'ski-flatepicker-js',
+            'https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js',
+            [],
+            '1.7.0',
+            true
+        );
+
     }
 
 }

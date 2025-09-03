@@ -26,7 +26,7 @@
                 }
             }
 
-        // 2. Filter function
+            // 2. Filter function
             function filter_items_by_renting_option($items, $selected_option_indices) {
                 $filtered = [];
                 foreach ($items as $item) {
@@ -479,7 +479,7 @@
 
                                             <div class="mb-3">
                                                 <label class="form-label fw-bold"><?php esc_html_e("Enter Birthday", "ski-ride-servetech"); ?></label>
-                                                <input type="date" class="form-control" name="member[<?php echo $index; ?>][birthday]">
+                                                <input type="date" class="member-birthday" class="form-control" name="member[<?php echo $index; ?>][birthday]">
                                             </div>
 
                                             <div class="mb-3">
@@ -665,7 +665,7 @@
 
 jQuery(document).ready(function($) {
     var groupData = null
-
+    Notiflix.Loading.standard();
     $.post('<?php echo admin_url('admin-ajax.php'); ?>', { action: 'check_user_group' }, function(response) {
         if (response.success && response.data.has_group) {
             var stepper = new window.Stepper(document.querySelector('#srs-booking-form'), {
@@ -678,10 +678,14 @@ jQuery(document).ready(function($) {
             stepper.to(3); 
             $('#group-members-list').html(response.data.html);
         }
+        Notiflix.Loading.remove();
+
+
     });
 
 
     $('#srs-booking-form-inner').on('submit', function(e) {
+        Notiflix.Loading.standard();
         e.preventDefault();
 
         var formData = $(this).serialize();
@@ -690,7 +694,10 @@ jQuery(document).ready(function($) {
             if (response.success) {
                 alert('Group saved successfully!');
                 stepper.to(3); 
+                Notiflix.Loading.remove();
+                window.location.reload();
             } else {
+                Notiflix.Loading.remove();
                 alert('Error: ' + response.data);
             }
         });
@@ -700,6 +707,7 @@ jQuery(document).ready(function($) {
 
     // Add new person
     $("#add-new-person").on("click", function (e) {
+        Notiflix.Loading.standard();
         e.preventDefault();
 
         if (groupData) {
@@ -717,12 +725,14 @@ jQuery(document).ready(function($) {
         }
 
         // go to first step
+        Notiflix.Loading.remove();
         stepper.to(1);
     });
 
 
     // Edit person
     $(document).on("click", ".edit-member", function (event) {
+        Notiflix.Loading.standard();
         event.preventDefault();
         if (groupData) {
             // pre-fill fitting location
@@ -761,6 +771,7 @@ jQuery(document).ready(function($) {
             $("#age").val(member.age);
             $("#weight").val(member.weight);
             $("#height").val(member.height);
+            Notiflix.Loading.remove();
             stepper.to(1);
         }
 
@@ -769,6 +780,7 @@ jQuery(document).ready(function($) {
 
     // Delete person
     $(document).on("click", ".delete-member", function (e) {
+        Notiflix.Loading.standard();
         e.preventDefault();
 
         let memberIndex = $(this).data("index");
@@ -783,14 +795,17 @@ jQuery(document).ready(function($) {
                 member_index: memberIndex,
             },
             success: function (response) {
+                Notiflix.Loading.remove();
                 if (response.success) {
                     $(`.member-item[data-index="${memberIndex}"]`).remove();
                 }
             }
         });
+        Notiflix.Loading.remove();
     });
 
     $("#packages-button").on("click", function(e) {
+        Notiflix.Loading.standard();
         e.preventDefault();
 
         let selectedData = {
@@ -868,6 +883,7 @@ jQuery(document).ready(function($) {
         });
 
         renderBookingSummary(selectedData);
+        Notiflix.Loading.remove();
         stepper.to(6)
     });
 
@@ -1084,7 +1100,7 @@ jQuery(document).ready(function($) {
                     bookingData.products.push({
                         product_id: member.pass.product_id,
                         name: member.pass.title,
-                        quantity: data.passes.length, 
+                        quantity: 1, 
                         price: member.pass.price
                     });
                 }
@@ -1130,6 +1146,20 @@ jQuery(document).ready(function($) {
 
     }
 
+    // Initializing date library 
+    flatpickr("#fitting_date", {
+        dateFormat: "Y-m-d",
+        minDate: "today"
+    });
+
+    flatpickr("#last_ski_date", {
+        dateFormat: "Y-m-d",
+        minDate: "today"
+    });
+
+    flatpickr(".member-birthday", {
+        dateFormat: "Y-m-d",
+    });
 
 
 
