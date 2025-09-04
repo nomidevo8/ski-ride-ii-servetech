@@ -30,6 +30,24 @@ class Widget_Manager
 
     public function enqueue_scripts()
     {
+
+        // Bootstrap CSS
+        wp_enqueue_style(
+            'bootstrap-css',
+            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+            [],
+            '5.3.3'
+        );
+
+        // Bootstrap Bundle JS (includes Popper)
+        wp_enqueue_script(
+            'bootstrap-js',
+            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+            ['jquery'],
+            '5.3.3',
+            true 
+        );
+
         // Later: add your CSS + JS for form steps
         wp_enqueue_style('srs-style', SRS_PLUGIN_URL . 'assets/css/style.css', [], '1.0.0');
         wp_enqueue_script('srs-script', SRS_PLUGIN_URL . 'assets/js/script.js', ['jquery'], '1.0.0.1', true);
