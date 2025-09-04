@@ -50,7 +50,7 @@ class Widget_Manager
 
         // Later: add your CSS + JS for form steps
         wp_enqueue_style('srs-style', SRS_PLUGIN_URL . 'assets/css/style.css', [], '1.0.2');
-        wp_enqueue_script('srs-script', SRS_PLUGIN_URL . 'assets/js/script.js', ['jquery'], '1.0.0.51', true);
+        wp_enqueue_script('srs-script', SRS_PLUGIN_URL . 'assets/js/script.js', ['jquery'], '1.0.0.52', true);
 
         wp_localize_script(
             'srs-script',
@@ -77,7 +77,7 @@ class Widget_Manager
             '1.7.0',
             true
         );
-        wp_enqueue_script('srs-script', SRS_PLUGIN_URL . 'assets/js/script.js', ['jquery', 'jquery-steps'], '1.0.0.51', true);
+        wp_enqueue_script('srs-script', SRS_PLUGIN_URL . 'assets/js/script.js', ['jquery', 'jquery-steps'], '1.0.0.52', true);
 
         // Loader 
         wp_enqueue_script(

@@ -12,11 +12,10 @@ jQuery(document).ready(function ($) {
 
 
 jQuery(document).ready(function($) {
-  
-    var isBookingPage = window.location.href.includes("booking");
-    var isElementorPreview = window.location.href.includes("elementor-preview") || $('body').hasClass('elementor-editor-active') || window.location.href.includes("action=elementor");
+    
+    var $form = $('#srs-booking-form');
 
-    if (isBookingPage && !isElementorPreview) {
+    if ($form.length > 0 && !$('body').hasClass('elementor-editor-active')) {
         var groupData = null
         Notiflix.Loading.standard();
 
