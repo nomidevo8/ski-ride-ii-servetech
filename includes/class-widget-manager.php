@@ -31,9 +31,17 @@ class Widget_Manager
     public function enqueue_scripts()
     {
         // Later: add your CSS + JS for form steps
-        wp_enqueue_style('srs-style', SRS_PLUGIN_URL . 'assets/css/style.css', [], time());
-        wp_enqueue_script('srs-script', SRS_PLUGIN_URL . 'assets/js/script.js', ['jquery'], '1.0.0', true);
+        wp_enqueue_style('srs-style', SRS_PLUGIN_URL . 'assets/css/style.css', [], '1.0.0');
+        wp_enqueue_script('srs-script', SRS_PLUGIN_URL . 'assets/js/script.js', ['jquery'], '1.0.0.0', true);
 
+        wp_localize_script(
+            'srs-script',
+            'srs_ajax',
+            [
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('srs_nonce'),
+            ]
+        );
 
         // CSS
         wp_enqueue_style(

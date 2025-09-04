@@ -6,6 +6,178 @@
     color: #fff;
     border-color: #007bff;
 }
-.step-trigger{
+
+.step-trigger {
     padding: 0px !important;
+}
+
+
+/* First Step Styling   */
+.location-option {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    display: block;
+}
+
+input[type="radio"]:checked+.location-option {
+    background: #f1f1f1;
+    border-color: #000;
+    border: 1px solid black !important;
+    color: #000;
+}
+
+/* Buttons */
+.dev-continue-button {
+    background-color: #ffeb00 !important;
+    border: none;
+}
+
+.dev-continue-button:hover {
+    background-color: #ffe600 !important;
+}
+
+/* Step 2 styles */
+
+/* Members list wrapper */
+#group-members-list .list-group {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 0;
+}
+
+/* Each list item */
+#group-members-list .list-group-item {
+    display: flex;
+    align-items: center;
+    border: none;
+    border-bottom: 1px solid #ddd;
+    padding: 12px 16px;
+    background: #fff;
+}
+
+/* Member name centered */
+#group-members-list .list-group-item span {
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* Icon buttons */
+#group-members-list .edit-member,
+#group-members-list .delete-member {
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    color: #666;
+    transition: color 0.2s ease;
+}
+
+/* Hover effects */
+#group-members-list .edit-member:hover {
+    color: #0d6efd;
+}
+
+#group-members-list .delete-member:hover {
+    color: #dc3545;
+}
+
+/* Add another person button */
+#add-new-person {
+    background-color: #3498db;
+    /* bright blue */
+    border: none;
+}
+
+#add-new-person:hover {
+    background-color: #2980b9;
+}
+
+
+/* Step 5 styling  */
+
+/* Equipment cards */
+.equipment-card {
+    border: none;
+    background: #D7EEFF;
+    border-radius: 8px;
+    transition: all 0.3s ease-in-out;
+}
+
+.equipment-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+}
+
+/* Checkbox alignment */
+.equipment-card .form-check-input {
+    margin-top: 0.35rem;
+}
+
+/* Price footer */
+.price-footer {
+    background: transparent;
+    font-size: 15px;
+    padding: 8px;
+    border-top: 2px solid #ffffff;
+}
+
+/* primary css  */
+
+.dev-blue-btn {
+    background-color: #5FAAE3;
+    color: white;
+}
+
+.package-lable-size {
+    font-size: 20px;
+}
+
+.equipment-card-para {
+    font-size: 18px;
+    line-height: 20px;
+    font-weight: 400;
+}
+
+
+.dev-cancel-button {
+    background-color: #F2F9FF;
+}
+
+.dev-back-btn {
+    color: #fff;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.dev-radio-design {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    width: 18px !important;
+    height: 18px !important;
+    border: 2px solid #555 !important;
+    border-radius: 4px !important;
+    display: inline-block !important;
+    position: relative !important;
+    cursor: pointer !important;
+    margin-right: 6px !important;
+}
+
+/* Checked state: add a checkmark or filled box */
+.dev-radio-design:checked {
+    background-color: #007bff !important;
+    border-color: #007bff !important;
+}
+
+.dev-radio-design:checked::after {
+    content: "✔" !important;
+    color: white !important;
+    font-size: 12px !important;
+    position: absolute !important;
+    top: -2px !important;
+    left: 2px !important;
 }
