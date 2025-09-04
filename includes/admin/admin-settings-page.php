@@ -229,9 +229,6 @@ class Admin_settings_page
     public function render_settings_page()
     {
         $options = get_option($this->option_key, []);
-        echo "<pre>";
-        print_r($options);
-        echo "</pre>";
         ?>
         <div class="wrap bootstrap-wrapper">
             <h1><?php _e('Ski Ride Form Settings', 'ski-ride-servetech'); ?></h1>
