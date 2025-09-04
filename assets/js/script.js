@@ -12,36 +12,36 @@ jQuery(document).ready(function ($) {
 
 
 jQuery(document).ready(function($) {
-    var groupData = null
-    Notiflix.Loading.standard();
+  
+    if (window.location.href.includes("booking")) {
+        var groupData = null
+        Notiflix.Loading.standard();
 
-    $.post(srs_ajax.ajax_url, { action: 'check_user_group' }, function(response) {
-        if (response.success && response.data.has_group) {
-            // ✅ user has group
-            var stepper = new window.Stepper(document.querySelector('#srs-booking-form'), {
-                linear: true,
-                animation: true
-            });
-            groupData = response.data;
+        $.post(srs_ajax.ajax_url, { action: 'check_user_group' }, function(response) {
+            if (response.success && response.data.has_group) {
+                // ✅ user has group
+                var stepper = new window.Stepper(document.querySelector('#srs-booking-form'), {
+                    linear: true,
+                    animation: true
+                });
+                groupData = response.data;
 
-            stepper.to(3); 
-            $('#group-members-list').html(response.data.html);
+                stepper.to(3); 
+                $('#group-members-list').html(response.data.html);
 
-        } else if (!response.success && response.data.reason === 'not_logged_in') {
-            // ❌ user not logged in
-            $("#loginModal").modal("show");
+            } else if (!response.success && response.data.reason === 'not_logged_in') {
+                // ❌ user not logged in
+                $("#loginModal").modal("show");
 
-        } else {
-            // ⚠️ user logged in but has no group
-            // $("#noGroupModal").modal("show"); 
-            // or redirect, or show a message: "Please create a group first"
-        }
+            } else {
+                // ⚠️ user logged in but has no group
+                // $("#noGroupModal").modal("show"); 
+                // or redirect, or show a message: "Please create a group first"
+            }
 
-        Notiflix.Loading.remove();
-    });
+            Notiflix.Loading.remove();
+        });
 
-    if (!window.location.href.includes("booking")) {
-        Notiflix.Loading.remove();
     }
 
 
