@@ -113,39 +113,46 @@ class Wocommerce_Init
 
         // Loop through products
         if (!empty($booking['products'])) {
-            foreach ($booking['products'] as $item) {
+            $non_rental_items = [];
+           foreach ($booking['products'] as $item) {
                 $product_id = intval($item['product_id']);
                 $quantity = intval($item['quantity']) ?: 1;
-
                 $is_rental = get_post_meta($product_id, 'is_rental', true) === 'yes';
 
-                // Only add rental_days if product is rental
                 $cart_item_data = [];
-                if ($is_rental) {
-                    $cart_item_data = ['rental_days' => $rental_days];
-                }
 
-                // Add to cart
-                WC()->cart->add_to_cart(
-                    $product_id,
-                    $quantity,
-                    0,
-                    [],
-                    $cart_item_data
-                );
-
-                // Store rental meta for display only
                 if ($is_rental) {
+                    // Add rental item individually
+                    if (isset($item['rental_days'])) {
+                        $cart_item_data['rental_days'] = intval($item['rental_days']);
+                    }
+                    $cart_item_data['unique_key'] = md5(microtime() . rand());
+
+                    WC()->cart->add_to_cart($product_id, $quantity, 0, [], $cart_item_data);
+
+                    // Add rental meta for display
                     foreach (WC()->cart->get_cart() as $key => $cart_item) {
                         if ($cart_item['product_id'] == $product_id && isset($cart_item_data['rental_days'])) {
                             WC()->cart->cart_contents[$key]['rental_data'] = [
                                 'type' => $item['name'],
-                                'days' => $rental_days,
+                                'days' => $item['rental_days'],
                             ];
                         }
                     }
+
+                } else {
+                    // Check if product already exists in cart
+                    $cart_key = WC()->cart->find_product_in_cart(WC()->cart->generate_cart_id($product_id));
+                    if ($cart_key) {
+                        // Product exists, increase quantity
+                        WC()->cart->cart_contents[$cart_key]['quantity'] += $quantity;
+                    } else {
+                        // Add as new cart item
+                        WC()->cart->add_to_cart($product_id, $quantity);
+                    }
                 }
             }
+
         }
 
         // Apply boots discount if available

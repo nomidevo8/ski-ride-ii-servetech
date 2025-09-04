@@ -44,23 +44,23 @@ class Ride_Booking_Form extends Widget_Base
     protected function register_controls()
     {
         // Content Controls 
-        Form_Content_Controls::register($this);
+        // Form_Content_Controls::register($this);
 
         //Styling Controls
-        Form_Style_Controls::register($this);
+        // Form_Style_Controls::register($this);
 
     }
 
     protected function render()
     {
-        $elementorSettings = $this->get_settings_for_display();
+        // $elementorSettings = $this->get_settings_for_display();
         $AdminSettings = get_option($this->option_key, []);
         // This will create PHP variables for each control
-        extract($elementorSettings);
+        // extract($elementorSettings);
         extract($AdminSettings);
 
         // Pass settings to template
-        $form_title = !empty($elementorSettings['form_title']) ? $elementorSettings['form_title'] : __('Book Your Ride', 'ski-ride-servetech');
+        // $form_title = !empty($elementorSettings['form_title']) ? $elementorSettings['form_title'] : __('Book Your Ride', 'ski-ride-servetech');
 
         // Load template file
         $template = SRS_PLUGIN_PATH . 'includes/widgets/templates/ride-booking-form.php';

@@ -78,6 +78,24 @@ class Widget_Manager
             true
         );
 
+        // Toaster 
+
+         wp_enqueue_style(
+            'toastr-css',
+            'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css',
+            [],
+            '2.1.4'
+        );
+
+        // JS
+        wp_enqueue_script(
+            'toastr-js',
+            'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js',
+            ['jquery'], // or [] if no jQuery dependency
+            '2.1.4',
+            true
+        );
+
     }
 
 }
