@@ -73,7 +73,7 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         Notiflix.Loading.standard();
 
-        $.post("<?php echo admin_url('admin-ajax.php'); ?>", {
+        $.post(srs_ajax.ajax_url, {
             action: "popup_user_login",
             email: $("#login-email").val(),
             password: $("#login-password").val()
@@ -94,7 +94,7 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         Notiflix.Loading.standard();
 
-        $.post("<?php echo admin_url('admin-ajax.php'); ?>", {
+        $.post(srs_ajax.ajax_url, {
             action: "popup_user_register",
             name: $("#register-name").val(),
             phone: $("#register-phone").val(),
@@ -119,7 +119,7 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         Notiflix.Loading.standard();
 
-        $.post("<?php echo admin_url('admin-ajax.php'); ?>", {
+        $.post(srs_ajax.ajax_url, {
             action: "popup_user_forgot_password",
             email: $("#forgot-email").val()
         }, function(res){
