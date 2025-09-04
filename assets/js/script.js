@@ -40,6 +40,11 @@ jQuery(document).ready(function($) {
         Notiflix.Loading.remove();
     });
 
+    if (!window.location.href.includes("booking")) {
+        Notiflix.Loading.remove();
+    }
+
+
     // Switch modals
     $("#showRegister").on("click", function(e){
         e.preventDefault();
@@ -174,6 +179,7 @@ jQuery(document).ready(function($) {
     $("#add-new-person").on("click", function (e) {
         Notiflix.Loading.standard();
         e.preventDefault();
+        $("#hidden-member-index").val('');
         $(".cancel-edit").removeClass('d-none');
         if (groupData) {
             // pre-fill fitting location
@@ -277,6 +283,7 @@ jQuery(document).ready(function($) {
                     $(`.member-item[data-index="${memberIndex}"]`).remove();
                 }
                 toastr.success('User Successfully Removed', 'Success');
+                window.location.reload();
             }
         });
     });
@@ -648,6 +655,7 @@ jQuery(document).ready(function($) {
                         if (res.success && res.data.redirect) {
                             // Redirect to checkout
                             toastr.success('Added To Cart', 'Success');
+                            Notiflix.Loading.remove();
                             window.location.href = res.data.redirect;
                         } else {
                             toastr.error('Facing Issue Please try again', 'Error');

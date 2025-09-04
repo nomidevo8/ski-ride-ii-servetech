@@ -181,3 +181,9 @@ input[type="radio"]:checked+.location-option {
     top: -2px !important;
     left: 2px !important;
 }
+
+span.badge.bg-light.color {
+    color: black !important;
+}
+
+.table-dark {background: #4d5154 !important;}

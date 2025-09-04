@@ -328,7 +328,7 @@
                     </div>
 
                     <!-- Navigation Buttons -->
-                    <div class="d-flex justify-content-between mt-4">
+                    <div class="d-flex justify-content-around mt-4">
                         <button type="button" class="btn px-4 dev-back-btn dev-step-back3">
                             <?php esc_html_e("BACK", "ski-ride-servetech"); ?>
                         </button>
@@ -398,9 +398,9 @@
                                 <?php esc_html_e("Other Package Options", "ski-ride-servetech"); ?>
                             </h5>
                             <div class="row g-3 align-items-center">
-                                <div class="col-md-4 mt-30">
+                                <div class="col-md-4 mt-4">
                                     <div class="option-box p-2 border rounded-2">
-                                        <div class="form-check d-flex align-center gap-2">
+                                        <div class="form-check d-flex align-items-center gap-2">
                                             <input type="checkbox" class="form-check-input"
                                                 id="has-boots"
                                                 data-discount="<?php echo esc_attr($AdminSettings['boots_discount'] ?? 0); ?>">
@@ -411,9 +411,9 @@
                                     </div>
                                 </div>
 
-                                <div class="col-md-4 mt-30">
+                                <div class="col-md-4 mt-4">
                                     <div class="option-box p-2 border rounded-2">
-                                        <div class="form-check d-flex align-center gap-2">
+                                        <div class="form-check d-flex align-items-center gap-2">
                                             <input type="checkbox" class="form-check-input"
                                                 id="include-insurance"
                                                 data-price="<?php echo esc_attr($AdminSettings['insurance_price'] ?? 0); ?>"
@@ -461,7 +461,7 @@
                                     <div class="card equipment-card">
                                         <div class="card-body">
                                             <div class="form-check mb-2">
-                                                <input type="radio" class="form-check-input dev-radio-design"
+                                                <input type="radio" name="gears_types<?php echo $sub?>" class="form-check-input dev-radio-design"
                                                     id="<?php echo esc_attr($sub . '_' . $item['product_id']); ?>">
                                                 <label class="form-check-label fw-bold w-700 package-lable-size gear-names"
                                                     for="<?php echo esc_attr($sub . '_' . $item['product_id']); ?>">
@@ -551,7 +551,7 @@
                         <div class="row">
                             <?php foreach ($members as $index => $member) : ?>
                                 <div class="col-md-6 col-lg-4 mt-1"> <!-- adjust column size as needed -->
-                                    <div class="card shadow-sm mb-4 h-100">
+                                    <div class="card shadow-sm mb-4 h-100 bg-body-tertiary">
                                         <div class="card-body">
                                             <div class="mb-3">
                                                 <label class="form-label fw-bold pass_owner_name" data-start-date="<?php echo $member['fitting_date'] ?>" data-end-date="<?php echo $member['last_ski_date'] ?>">
