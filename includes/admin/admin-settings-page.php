@@ -349,7 +349,7 @@ class Admin_settings_page
                             <thead>
                                 <tr>
                                     <th><?php _e('Name', 'ski-ride-servetech'); ?></th>
-                                    <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Price/per day', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Description', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Assign Renting Options', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
@@ -404,7 +404,7 @@ class Admin_settings_page
                             <thead>
                                 <tr>
                                     <th><?php _e('Gear Name', 'ski-ride-servetech'); ?></th>
-                                    <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                    <th><?php _e('Price/per day', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Assign Renting Options', 'ski-ride-servetech'); ?></th>
                                     <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
                                 </tr>
