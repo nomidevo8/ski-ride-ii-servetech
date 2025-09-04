@@ -13,7 +13,10 @@ jQuery(document).ready(function ($) {
 
 jQuery(document).ready(function($) {
   
-    if (window.location.href.includes("booking")) {
+    var isBookingPage = window.location.href.includes("booking");
+    var isElementorPreview = window.location.href.includes("elementor-preview") || $('body').hasClass('elementor-editor-active') || window.location.href.includes("action=elementor");
+
+    if (isBookingPage && !isElementorPreview) {
         var groupData = null
         Notiflix.Loading.standard();
 
