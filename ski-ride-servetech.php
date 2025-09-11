@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Ski Ride Servetech
+ * Plugin Name: Ski Ride (ii) Servetech
  * Description: Multi-step ride booking form Elementor widget.
  * Version: 1.0.0
  * Author: Serve Tech Global
