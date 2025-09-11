@@ -190,13 +190,13 @@ class Admin_settings_page
         $product = $product_id ? wc_get_product($product_id) : false;
 
         // If no valid product, try finding by title
-        if (!$product) {
-            $existing = get_page_by_title($product_name, OBJECT, 'product');
-            if ($existing) {
-                $product_id = $existing->ID;
-                $product    = wc_get_product($product_id);
-            }
-        }
+        // if (!$product) {
+        //     $existing = get_page_by_title($product_name, OBJECT, 'product');
+        //     if ($existing) {
+        //         $product_id = $existing->ID;
+        //         $product    = wc_get_product($product_id);
+        //     }
+        // }
 
         if ($product) {
             // Update existing product
@@ -229,6 +229,7 @@ class Admin_settings_page
     public function render_settings_page()
     {
         $options = get_option($this->option_key, []);
+
         ?>
         <div class="wrap bootstrap-wrapper">
             <h1><?php _e('Ski Ride Form Settings', 'ski-ride-servetech'); ?></h1>

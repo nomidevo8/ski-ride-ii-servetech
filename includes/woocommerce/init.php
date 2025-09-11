@@ -18,11 +18,14 @@ class Wocommerce_Init
 
     private function __construct()
     {
-        // Wocommerce Init
-        add_filter('woocommerce_add_cart_item_data', [$this, 'dev_woocommerce_add_cart_item_data'], 10, 3);
-        add_action('woocommerce_before_calculate_totals', [$this, 'dev_woocommerce_before_calculate_totals'], 10, 3);
-        add_filter('woocommerce_get_item_data', [$this, 'dev_woocommerce_get_item_data'], 10, 2);
-        add_filter('woocommerce_cart_calculate_fees', [$this, 'dev_woocommerce_cart_calculate_fees'], 10, 2);
+        add_action('init', function() {
+            if (class_exists('WooCommerce')) {
+                add_filter('woocommerce_add_cart_item_data', [$this, 'dev_woocommerce_add_cart_item_data'], 20, 3);
+                add_action('woocommerce_before_calculate_totals', [$this, 'dev_woocommerce_before_calculate_totals'], 20, 1);
+                add_filter('woocommerce_get_item_data', [$this, 'dev_woocommerce_get_item_data'], 20, 2);
+                add_action('woocommerce_cart_calculate_fees', [$this, 'dev_woocommerce_cart_calculate_fees'], 20, 1);
+            }
+        });
 
         // Hooks For Woocoomerce handling 
         add_action('wp_ajax_srs_add_rental_to_cart', [$this, 'srs_add_rental_to_cart']);
@@ -38,6 +41,7 @@ class Wocommerce_Init
 
     public function dev_woocommerce_add_cart_item_data($cart_item_data, $product_id, $variation_id)
     {
+        if (is_admin() && !defined('DOING_AJAX')) return;
         if (get_post_meta($product_id, 'is_rental', true) === 'yes') {
             $rental_days = $cart_item_data['rental_days'] ?? intval($_POST['rental_days'] ?? 1);
             $cart_item_data['rental_days'] = $rental_days;
@@ -49,17 +53,21 @@ class Wocommerce_Init
 
     public function dev_woocommerce_before_calculate_totals($cart)
     {
+        if (is_admin() && !defined('DOING_AJAX')) return;
         foreach ($cart->get_cart() as &$cart_item) {
             if (isset($cart_item['rental_days'])) {
                 $days = floatval($cart_item['rental_days']);
                 $original_price = $cart_item['data']->get_regular_price();
-                $cart_item['data']->set_price($original_price * $days);
+                $new_price = $original_price * $days;
+                // Front-end notice for debugging
+                $cart_item['data']->set_price($new_price);
             }
         }
     }
 
     public function dev_woocommerce_get_item_data($item_data, $cart_item)
     {
+        if (is_admin() && !defined('DOING_AJAX')) return;
         if (isset($cart_item['rental_days'])) {
             $item_data[] = [
                 'name' => 'Rental Days',
@@ -102,7 +110,6 @@ class Wocommerce_Init
         // echo "<pre>";
         // print_r($booking);
         // echo "</pre>";
-        $rental_days = $booking['rental_days'];
 
         if (!class_exists('WC_Cart')) {
             wp_send_json_error(['message' => 'WooCommerce not active']);
@@ -158,8 +165,9 @@ class Wocommerce_Init
         // Apply boots discount if available
         if (!empty($booking['boots_discount'])) {
             WC()->session->set('boots_discount', floatval($booking['boots_discount']));
+        } else {
+            WC()->session->__unset('boots_discount');
         }
-
         // Payment Type 
         if (!empty($booking['payment_type'])) {
             WC()->session->set('payment_type', sanitize_text_field($booking['payment_type']));

@@ -1,28 +1,26 @@
 jQuery(document).ready(function ($) {
-    // Initialize bs-stepper
-    window.stepper = new window.Stepper(document.querySelector('#srs-booking-form'), {
-        linear: true,
-        animation: true
-    });
-
-  
+    // Initialize bs-stepper only if booking form exists
+    var el = document.querySelector('#srs-booking-form');
+    if (el) {
+        window.stepper = new window.Stepper(el, {
+            linear: true,
+            animation: true
+        });
+    }
 });
 
 
 
 
 jQuery(document).ready(function($) {
-    
-    var $form = $('#srs-booking-form');
+    var groupData = null
+    Notiflix.Loading.standard();
 
-    if ($form.length > 0 && !$('body').hasClass('elementor-editor-active')) {
-        var groupData = null
-        Notiflix.Loading.standard();
-
-        $.post(srs_ajax.ajax_url, { action: 'check_user_group' }, function(response) {
-            if (response.success && response.data.has_group) {
-                // ✅ user has group
-                var stepper = new window.Stepper(document.querySelector('#srs-booking-form'), {
+    $.post(srs_ajax.ajax_url, { action: 'check_user_group' }, function(response) {
+        if (response.success && response.data.has_group) {
+            var el = document.querySelector('#srs-booking-form');
+            if (el) {
+                var stepper = new window.Stepper(el, {
                     linear: true,
                     animation: true
                 });
@@ -30,20 +28,22 @@ jQuery(document).ready(function($) {
 
                 stepper.to(3); 
                 $('#group-members-list').html(response.data.html);
-
-            } else if (!response.success && response.data.reason === 'not_logged_in') {
-                // ❌ user not logged in
-                $("#loginModal").modal("show");
-
-            } else {
-                // ⚠️ user logged in but has no group
-                // $("#noGroupModal").modal("show"); 
-                // or redirect, or show a message: "Please create a group first"
             }
+        } else if (!response.success && response.data.reason === 'not_logged_in') {
+            // ❌ user not logged in
+            $("#loginModal").modal("show");
 
-            Notiflix.Loading.remove();
-        });
+        } else {
+            // ⚠️ user logged in but has no group
+            // $("#noGroupModal").modal("show"); 
+            // or redirect, or show a message: "Please create a group first"
+        }
 
+        Notiflix.Loading.remove();
+    });
+
+    if (!window.location.href.includes("booking")) {
+        Notiflix.Loading.remove();
     }
 
 
