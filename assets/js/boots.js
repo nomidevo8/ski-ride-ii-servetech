@@ -17,10 +17,15 @@ jQuery(document).ready(function ($) {
 
         
         // Type Options (Child / Adult)
-        let typeHtml = `<select class="form-select" name="srs_boots[boots][${index}][type_options][]" multiple>
-                            <option value="Child">Child</option>
-                            <option value="Adult">Adult</option>
-                        </select>`;
+        let typeHtml = `<select class="form-select" name="srs_boots[boots][${index}][type_options][]" multiple>`;
+        if (srsBoots && srsBoots.typeOptions && srsBoots.typeOptions.length) {
+            srsBoots.typeOptions.forEach(function (opt) {
+                typeHtml += `<option value="${opt}">${opt}</option>`;
+            });
+        } else {
+            typeHtml += `<option value="Child">Child</option><option value="Adult">Adult</option>`;
+        }
+        typeHtml += `</select>`;
 
         let row = `
         <tr class="boot-row" data-boot-index="${index}">
@@ -30,7 +35,19 @@ jQuery(document).ready(function ($) {
             </td>
 
             <td>
-                <table class="table table-sm table-bordered day-prices-table mb-2">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input rental-toggle" type="checkbox" role="switch"
+                           id="rental-toggle-${index}" name="srs_boots[boots][${index}][is_rental]" value="1" checked>
+                    <label class="form-check-label" for="rental-toggle-${index}">Rental (multi-day pricing)</label>
+                </div>
+
+                <div class="base-price-wrapper mb-2" style="display:none;">
+                    <label class="form-label mb-1">Base Price</label>
+                    <input type="number" step="0.01" class="form-control base-price-input"
+                           name="srs_boots[boots][${index}][base_price]">
+                </div>
+
+                <table class="table table-sm table-bordered day-prices-table mb-2" style="">
                     <thead>
                         <tr>
                             <th>Day</th>
@@ -44,7 +61,7 @@ jQuery(document).ready(function ($) {
             </td>
 
             <td>
-                <input type="number" step="0.01" class="form-control" name="srs_boots[boots][${index}][prices][extra]">
+                <input type="number" step="0.01" class="form-control extra-price-input" name="srs_boots[boots][${index}][prices][extra]">
             </td>
             <td>
                 ${rentingHtml}
@@ -60,6 +77,8 @@ jQuery(document).ready(function ($) {
         </tr>`;
 
         $("#boots-table > tbody").append(row);
+        // ensure initial toggle behavior applied
+        $("#boots-table > tbody tr.boot-row:last .rental-toggle").trigger("change");
     });
 
     // Remove Boot Row
@@ -87,6 +106,36 @@ jQuery(document).ready(function ($) {
     // Remove Day Row
     $(document).on("click", ".remove-day", function () {
         $(this).closest("tr").remove();
+    });
+
+    // Rental toggle behavior
+    $(document).on("change", ".rental-toggle", function () {
+        const bootRow = $(this).closest("tr.boot-row");
+        const isChecked = $(this).is(":checked");
+        const dayTable = bootRow.find("table.day-prices-table");
+        const addDayBtn = bootRow.find(".add-day");
+        const basePriceWrap = bootRow.find(".base-price-wrapper");
+        const extraPriceInput = bootRow.find(".extra-price-input");
+
+        if (isChecked) {
+            dayTable.show();
+            addDayBtn.show();
+            basePriceWrap.hide();
+            extraPriceInput.prop("disabled", false);
+        } else {
+            dayTable.hide();
+            addDayBtn.hide();
+            basePriceWrap.show();
+            extraPriceInput.prop("disabled", true);
+        }
+    });
+
+    // Initialize toggle state on page load for existing rows
+    $("#boots-table > tbody > tr.boot-row").each(function () {
+        const toggle = $(this).find(".rental-toggle");
+        if (toggle.length) {
+            toggle.trigger("change");
+        }
     });
 
     // Reindex boot rows after removal

@@ -36,6 +36,18 @@ jQuery(document).ready(function ($) {
             </td>
 
             <td>
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input rental-toggle" type="checkbox" role="switch"
+                           id="go-rental-toggle-${index}" name="srs_goggles[goggles][${index}][is_rental]" value="1" checked>
+                    <label class="form-check-label" for="go-rental-toggle-${index}">Rental (multi-day pricing)</label>
+                </div>
+
+                <div class="base-price-wrapper mb-2" style="display:none;">
+                    <label class="form-label mb-1">Base Price</label>
+                    <input type="number" step="0.01" class="form-control base-price-input"
+                           name="srs_goggles[goggles][${index}][base_price]">
+                </div>
+
                 <table class="table table-sm table-bordered day-prices-table mb-2">
                     <thead>
                         <tr>
@@ -50,7 +62,7 @@ jQuery(document).ready(function ($) {
             </td>
 
             <td>
-                <input type="number" step="0.01" class="form-control" name="srs_goggles[goggles][${index}][prices][extra]">
+                <input type="number" step="0.01" class="form-control extra-price-input" name="srs_goggles[goggles][${index}][prices][extra]">
             </td>
 
             <td>
@@ -63,6 +75,7 @@ jQuery(document).ready(function ($) {
         </tr>`;
 
         $("#goggles-table > tbody").append(row);
+        $("#goggles-table > tbody tr.gear-row:last .rental-toggle").trigger("change");
     });
 
     // Remove Goggles Row
@@ -90,6 +103,34 @@ jQuery(document).ready(function ($) {
     // Remove Day Row
     $(document).on("click", ".remove-day", function () {
         $(this).closest("tr").remove();
+    });
+
+    // Rental toggle behavior
+    $(document).on("change", ".rental-toggle", function () {
+        const gearRow = $(this).closest("tr.gear-row");
+        const isChecked = $(this).is(":checked");
+        const dayTable = gearRow.find("table.day-prices-table");
+        const addDayBtn = gearRow.find(".add-day");
+        const basePriceWrap = gearRow.find(".base-price-wrapper");
+        const extraPriceInput = gearRow.find(".extra-price-input");
+
+        if (isChecked) {
+            dayTable.show();
+            addDayBtn.show();
+            basePriceWrap.hide();
+            extraPriceInput.prop("disabled", false);
+        } else {
+            dayTable.hide();
+            addDayBtn.hide();
+            basePriceWrap.show();
+            extraPriceInput.prop("disabled", true);
+        }
+    });
+
+    // Initialize toggle state on page load
+    $("#goggles-table > tbody > tr.gear-row").each(function () {
+        const toggle = $(this).find(".rental-toggle");
+        if (toggle.length) toggle.trigger("change");
     });
 
     // Reindex goggles after removal

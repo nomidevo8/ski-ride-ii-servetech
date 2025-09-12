@@ -24,7 +24,9 @@ class SRS_Sanitize_Settings {
                         if (empty($name)) continue;
 
                         $desc = sanitize_textarea_field($gear['desc'] ?? '');
-                        $prices = self::sanitize_prices($gear['prices'] ?? []);
+                        $is_rental = !empty($gear['is_rental']);
+                        $base_price = isset($gear['base_price']) ? floatval($gear['base_price']) : 0.0;
+                        $prices = $is_rental ? self::sanitize_prices($gear['prices'] ?? []) : [];
                         $renting_options = self::sanitize_array($gear['renting_options'] ?? []);
                         $type_options = self::sanitize_array($gear['type_options'] ?? []);
 
@@ -32,6 +34,8 @@ class SRS_Sanitize_Settings {
                             'name' => $name,
                             'desc' => $desc,
                             'prices' => $prices,
+                            'is_rental' => $is_rental,
+                            'base_price' => $base_price,
                             'renting_options' => $renting_options,
                             'type_options' => $type_options,
                             'product_id' => intval($gear['product_id'] ?? 0),
@@ -49,16 +53,21 @@ class SRS_Sanitize_Settings {
                         $name = sanitize_text_field($gear_type['name'] ?? '');
                         if (empty($name)) continue;
 
-                        $prices = self::sanitize_prices($gear_type['prices'] ?? []);
+                        $is_rental = !empty($gear_type['is_rental']);
+                        $base_price = isset($gear_type['base_price']) ? floatval($gear_type['base_price']) : 0.0;
+
+                        $prices = $is_rental ? self::sanitize_prices($gear_type['prices'] ?? []) : [];
                         $renting_options = self::sanitize_array($gear_type['renting_options'] ?? []);
                         $type_options = self::sanitize_array($gear_type['type_options'] ?? []);
 
                         $output[$type][] = [
                             'name' => $name,
                             'prices' => $prices,
+                            'is_rental' => $is_rental,
+                            'base_price' => $base_price,
                             'renting_options' => $renting_options,
                             'type_options' => $type_options,
-                            'product_id' => intval($insurance['product_id'] ?? 0),
+                            'product_id' => intval($gear_type['product_id'] ?? 0),
                         ];
                     }
                 }

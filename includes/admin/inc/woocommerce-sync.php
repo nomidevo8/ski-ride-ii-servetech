@@ -14,7 +14,9 @@ class SRS_Sync_WooCommerce {
         if (!class_exists('WC_Product')) return 0;
 
         $product_name = $item['name'] ?? '';
-        $base_price   = $item['prices'][1] ?? 0;
+        $is_rental    = !empty($item['is_rental']);
+        $rental_prices = is_array($item['prices'] ?? null) ? $item['prices'] : [];
+        $base_price   = $is_rental ? ($rental_prices[1] ?? 0) : floatval($item['base_price'] ?? 0);
         $product_id   = intval($item['product_id'] ?? 0);
 
         if (empty($product_name)) return 0;
@@ -28,8 +30,13 @@ class SRS_Sync_WooCommerce {
             $product->set_name($product_name);
             $product->set_regular_price($base_price);
             $product->set_catalog_visibility('hidden');
-            update_post_meta($product->get_id(), $meta_key_flag, 'yes');
-            update_post_meta($product->get_id(), $meta_key_prices, $item['prices']);
+            if ($is_rental) {
+                update_post_meta($product->get_id(), $meta_key_flag, 'yes');
+                update_post_meta($product->get_id(), $meta_key_prices, $rental_prices);
+            } else {
+                update_post_meta($product->get_id(), $meta_key_flag, 'no');
+                delete_post_meta($product->get_id(), $meta_key_prices);
+            }
             $product->save();
             return $product->get_id();
         } else {
@@ -40,8 +47,12 @@ class SRS_Sync_WooCommerce {
             $new_product->save();
 
             $new_product_id = $new_product->get_id();
-            update_post_meta($new_product_id, $meta_key_flag, 'yes');
-            update_post_meta($new_product_id, $meta_key_prices, $item['prices']);
+            if ($is_rental) {
+                update_post_meta($new_product_id, $meta_key_flag, 'yes');
+                update_post_meta($new_product_id, $meta_key_prices, $rental_prices);
+            } else {
+                update_post_meta($new_product_id, $meta_key_flag, 'no');
+            }
             return $new_product_id;
         }
     }

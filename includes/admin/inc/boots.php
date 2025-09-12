@@ -47,7 +47,7 @@ class SRS_Boots {
                         <thead class="table-dark">
                             <tr>
                                 <th><?php _e('Boot Name', 'ski-ride-servetech'); ?></th>
-                                <th><?php _e('Day-wise Prices', 'ski-ride-servetech'); ?></th>
+                                <th><?php _e('Pricing', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Extra Day Price', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Renting Options', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Type', 'ski-ride-servetech'); ?></th>
@@ -67,7 +67,25 @@ class SRS_Boots {
                                                 value="<?php echo esc_attr($boot['product_id'] ?? 0); ?>">
                                         </td>
                                         <td>
-                                            <table class="table table-sm table-bordered day-prices-table">
+                                            <div class="form-check form-switch mb-2">
+                                                <?php $is_rental = !empty($boot['is_rental']); ?>
+                                                <input class="form-check-input rental-toggle" type="checkbox" role="switch"
+                                                    id="rental-toggle-<?php echo $index; ?>"
+                                                    name="<?php echo $this->option_key; ?>[boots][<?php echo $index; ?>][is_rental]"
+                                                    value="1" <?php checked($is_rental, true); ?>>
+                                                <label class="form-check-label" for="rental-toggle-<?php echo $index; ?>">
+                                                    <?php _e('Rental (multi-day pricing)', 'ski-ride-servetech'); ?>
+                                                </label>
+                                            </div>
+
+                                            <div class="base-price-wrapper mb-2" style="<?php echo $is_rental ? 'display:none;' : ''; ?>">
+                                                <label class="form-label mb-1"><?php _e('Base Price', 'ski-ride-servetech'); ?></label>
+                                                <input type="number" step="0.01" class="form-control base-price-input"
+                                                    name="<?php echo $this->option_key; ?>[boots][<?php echo $index; ?>][base_price]"
+                                                    value="<?php echo esc_attr($boot['base_price'] ?? ''); ?>">
+                                            </div>
+
+                                            <table class="table table-sm table-bordered day-prices-table" style="<?php echo $is_rental ? '' : 'display:none;'; ?>">
                                                 <thead>
                                                     <tr>
                                                         <th><?php _e('Day', 'ski-ride-servetech'); ?></th>
@@ -76,7 +94,7 @@ class SRS_Boots {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <?php if (!empty($boot['prices'])): ?>
+                                                    <?php if (!empty($boot['prices']) && $is_rental): ?>
                                                         <?php foreach ($boot['prices'] as $day => $price): ?>
                                                             <?php if ($day === 'extra') continue; ?>
                                                             <tr>
@@ -98,10 +116,10 @@ class SRS_Boots {
                                                     <?php endif; ?>
                                                 </tbody>
                                             </table>
-                                            <button type="button" class="btn btn-sm btn-primary add-day"><?php _e('Add Day', 'ski-ride-servetech'); ?></button>
+                                            <button type="button" class="btn btn-sm btn-primary add-day" style="<?php echo $is_rental ? '' : 'display:none;'; ?>"><?php _e('Add Day', 'ski-ride-servetech'); ?></button>
                                         </td>
                                         <td>
-                                            <input type="number" step="0.01" class="form-control"
+                                            <input type="number" step="0.01" class="form-control extra-price-input" <?php echo $is_rental ? '' : 'disabled'; ?>
                                                 name="<?php echo $this->option_key; ?>[boots][<?php echo $index; ?>][prices][extra]"
                                                 value="<?php echo esc_attr($boot['prices']['extra'] ?? ''); ?>">
                                         </td>

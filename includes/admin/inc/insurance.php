@@ -66,9 +66,6 @@ class SRS_Insurance {
     public function render_page() {
         $options = get_option($this->option_key, []);
         $insurances = $options['insurances'] ?? [];
-        echo "<pre>";
-        print_r($options);
-        echo "</pre>";
         $renting_options = get_option('srs_renting_options', []);
         ?>
         <div class="wrap bootstrap-wrapper">
