@@ -14,7 +14,14 @@ jQuery(document).ready(function ($) {
         } else {
             rentingHtml = `<div class="alert alert-warning p-2">${srsInsurance.noOptionsMsg}</div>`;
         }
-
+        let typeHtml = "";
+        if (srsInsurance.typeOptions && srsInsurance.typeOptions.length > 0) {
+            typeHtml = `<select class="form-select" name="srs_goggles[insurances][${index}][type_options][]" multiple>`;
+            srsInsurance.typeOptions.forEach(function (type) {
+                typeHtml += `<option value="${type}">${type}</option>`;
+            });
+            typeHtml += `</select>`;
+        }
         let row = `
         <tr class="insurance-row" data-insurance-index="${index}">
             <td>
@@ -42,6 +49,9 @@ jQuery(document).ready(function ($) {
 
             <td>
                 ${rentingHtml}
+            </td>
+            <td>
+                ${typeHtml}
             </td>
 
             <td>

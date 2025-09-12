@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) exit;
 class SRS_Packages {
 
     private $option_key = 'srs_packages';
+    private $type_options = ['Child', 'Adult'];
 
     public function __construct() {
         add_action('admin_init', [$this, 'register_settings']);
@@ -17,7 +18,7 @@ class SRS_Packages {
     }
 
     public function sanitize_settings($input) {
-    // Use the universal sanitizer for gears
+        // Use the universal sanitizer for packages
         $output = SRS_Sanitize_Settings::sanitize($input, 'packages');
 
         // Sync products to WooCommerce automatically
@@ -32,7 +33,7 @@ class SRS_Packages {
 
     public function render_page() {
         $options = get_option($this->option_key, []);
-        $gears = $options['gears'] ?? [];
+        $packages = $options['packages'] ?? [];
         $renting_options = get_option('srs_renting_options', []);
         ?>
         <div class="wrap bootstrap-wrapper">
@@ -49,52 +50,49 @@ class SRS_Packages {
                                 <th><?php _e('Day-wise Prices', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Extra Day Price', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Renting Options', 'ski-ride-servetech'); ?></th>
+                                <th><?php _e('Type', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (!empty($gears)): ?>
-                                <?php foreach ($gears as $gear_index => $gear): ?>
-                                    <tr class="gear-row" data-gear-index="<?php echo $gear_index; ?>">
+                            <?php if (!empty($packages)): ?>
+                                <?php foreach ($packages as $index => $pkg): 
+                                    $selected_types = $pkg['type_options'] ?? [];
+                                ?>
+                                    <tr class="gear-row" data-gear-index="<?php echo $index; ?>">
                                         <td>
                                             <input type="text" class="form-control"
-                                                name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][name]"
-                                                value="<?php echo esc_attr($gear['name'] ?? ''); ?>">
+                                                name="<?php echo $this->option_key; ?>[packages][<?php echo $index; ?>][name]"
+                                                value="<?php echo esc_attr($pkg['name'] ?? ''); ?>">
                                             <input type="hidden"
-                                                name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][product_id]"
-                                                value="<?php echo esc_attr($gear['product_id'] ?? 0); ?>">
+                                                name="<?php echo $this->option_key; ?>[packages][<?php echo $index; ?>][product_id]"
+                                                value="<?php echo esc_attr($pkg['product_id'] ?? 0); ?>">
                                         </td>
                                         <td>
                                             <textarea class="form-control" rows="2"
-                                                name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][desc]"><?php echo esc_textarea($gear['desc'] ?? ''); ?></textarea>
+                                                name="<?php echo $this->option_key; ?>[packages][<?php echo $index; ?>][desc]"><?php echo esc_textarea($pkg['desc'] ?? ''); ?></textarea>
                                         </td>
                                         <td>
-                                            <table class="table table-sm table-bordered day-prices-table">
+                                            <table class="table table-sm table-bordered day-prices-table mb-2">
                                                 <thead>
                                                     <tr>
-                                                        <th><?php _e('Day', 'ski-ride-servetech'); ?></th>
-                                                        <th><?php _e('Price', 'ski-ride-servetech'); ?></th>
+                                                        <th>Day</th>
+                                                        <th>Price</th>
                                                         <th></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <?php if (!empty($gear['prices'])): ?>
-                                                        <?php foreach ($gear['prices'] as $day => $price): ?>
+                                                    <?php if (!empty($pkg['prices'])): ?>
+                                                        <?php foreach ($pkg['prices'] as $day => $price): ?>
                                                             <?php if ($day === 'extra') continue; ?>
                                                             <tr>
-                                                                <td>
-                                                                    <input type="number" min="1" class="form-control"
-                                                                        name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][prices][day][]"
-                                                                        value="<?php echo esc_attr($day); ?>">
-                                                                </td>
-                                                                <td>
-                                                                    <input type="number" step="0.01" class="form-control"
-                                                                        name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][prices][value][]"
-                                                                        value="<?php echo esc_attr($price); ?>">
-                                                                </td>
-                                                                <td>
-                                                                    <button type="button" class="btn btn-danger btn-sm remove-day">×</button>
-                                                                </td>
+                                                                <td><input type="number" min="1" class="form-control"
+                                                                    name="<?php echo $this->option_key; ?>[packages][<?php echo $index; ?>][prices][day][]"
+                                                                    value="<?php echo esc_attr($day); ?>"></td>
+                                                                <td><input type="number" step="0.01" class="form-control"
+                                                                    name="<?php echo $this->option_key; ?>[packages][<?php echo $index; ?>][prices][value][]"
+                                                                    value="<?php echo esc_attr($price); ?>"></td>
+                                                                <td><button type="button" class="btn btn-danger btn-sm remove-day">×</button></td>
                                                             </tr>
                                                         <?php endforeach; ?>
                                                     <?php endif; ?>
@@ -104,28 +102,35 @@ class SRS_Packages {
                                         </td>
                                         <td>
                                             <input type="number" step="0.01" class="form-control"
-                                                name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][prices][extra]"
-                                                value="<?php echo esc_attr($gear['prices']['extra'] ?? ''); ?>">
+                                                name="<?php echo $this->option_key; ?>[packages][<?php echo $index; ?>][prices][extra]"
+                                                value="<?php echo esc_attr($pkg['prices']['extra'] ?? ''); ?>">
                                         </td>
                                         <td>
-                                            <?php if (!empty($renting_options)): 
-                                                $selected = $gear['renting_options'] ?? [];
-                                                ?>
-                                                <select class="form-select" name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][renting_options][]" multiple>
-                                                    <?php foreach ($renting_options as $option): ?>
-                                                        <option value="<?php echo esc_attr($option); ?>" <?php echo in_array($option, $selected) ? 'selected' : ''; ?>>
-                                                            <?php echo esc_html($option); ?>
+                                            <?php if (!empty($renting_options)):
+                                                $selected = $pkg['renting_options'] ?? [];
+                                            ?>
+                                                <select class="form-select" name="<?php echo $this->option_key; ?>[packages][<?php echo $index; ?>][renting_options][]" multiple>
+                                                    <?php foreach ($renting_options as $opt): ?>
+                                                        <option value="<?php echo esc_attr($opt); ?>" <?php echo in_array($opt, $selected) ? 'selected' : ''; ?>>
+                                                            <?php echo esc_html($opt); ?>
                                                         </option>
                                                     <?php endforeach; ?>
                                                 </select>
                                             <?php else: ?>
-                                                <div class="alert alert-warning p-2">
-                                                    <?php _e('First add the renting options.', 'ski-ride-servetech'); ?>
-                                                </div>
+                                                <div class="alert alert-warning p-2"><?php _e('First add the renting options.', 'ski-ride-servetech'); ?></div>
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <button type="button" class="btn btn-danger btn-sm remove-packages-row"><?php _e('Remove Package', 'ski-ride-servetech'); ?></button>
+                                            <select class="form-select" name="<?php echo $this->option_key; ?>[packages][<?php echo $index; ?>][type_options][]" multiple>
+                                                <?php foreach ($this->type_options as $type): ?>
+                                                    <option value="<?php echo esc_attr($type); ?>" <?php echo in_array($type, $selected_types) ? 'selected' : ''; ?>>
+                                                        <?php echo esc_html($type); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-danger btn-sm remove-packages-row"><?php _e('Remove', 'ski-ride-servetech'); ?></button>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -153,12 +158,13 @@ class SRS_Packages {
             'srs-packages-js',
             plugin_dir_url(__DIR__) . '../../assets/js/packages.js',
             ['jquery'],
-            '1.0.0',
+            SRS_PLUGIN_VERSION,
             true
         );
 
         wp_localize_script('srs-packages-js', 'srsPackages', [
             'rentingOptions' => $renting_options,
+            'typeOptions'    => $this->type_options,
             'noOptionsMsg'   => __('First add the renting options.', 'ski-ride-servetech'),
         ]);
     }

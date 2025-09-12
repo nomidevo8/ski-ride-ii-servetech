@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) exit;
 class SRS_Socks {
 
     private $option_key = 'srs_socks';
-
+    private $type_options = ['Child', 'Adult'];
     public function __construct() {
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_scripts'], 1);
@@ -33,7 +33,7 @@ class SRS_Socks {
 
     public function render_page() {
         $options = get_option($this->option_key, []);
-        $gears = $options['gears'] ?? [];
+        $gears = $options['socks'] ?? [];
         $renting_options = get_option('srs_renting_options', []);
         ?>
         <div class="wrap bootstrap-wrapper">
@@ -50,6 +50,7 @@ class SRS_Socks {
                                 <th><?php _e('Day-wise Prices', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Extra Day Price', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Renting Options', 'ski-ride-servetech'); ?></th>
+                                <th><?php _e('Type', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
                             </tr>
                         </thead>
@@ -59,15 +60,15 @@ class SRS_Socks {
                                     <tr class="gear-row" data-gear-index="<?php echo $gear_index; ?>">
                                         <td>
                                             <input type="text" class="form-control"
-                                                name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][name]"
+                                                name="<?php echo $this->option_key; ?>[socks][<?php echo $gear_index; ?>][name]"
                                                 value="<?php echo esc_attr($gear['name'] ?? ''); ?>">
                                             <input type="hidden"
-                                                name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][product_id]"
+                                                name="<?php echo $this->option_key; ?>[socks][<?php echo $gear_index; ?>][product_id]"
                                                 value="<?php echo esc_attr($gear['product_id'] ?? 0); ?>">
                                         </td>
                                         <td>
                                             <textarea class="form-control" rows="2"
-                                                name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][desc]"><?php echo esc_textarea($gear['desc'] ?? ''); ?></textarea>
+                                                name="<?php echo $this->option_key; ?>[socks][<?php echo $gear_index; ?>][desc]"><?php echo esc_textarea($gear['desc'] ?? ''); ?></textarea>
                                         </td>
                                         <td>
                                             <table class="table table-sm table-bordered day-prices-table">
@@ -85,12 +86,12 @@ class SRS_Socks {
                                                             <tr>
                                                                 <td>
                                                                     <input type="number" min="1" class="form-control"
-                                                                        name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][prices][day][]"
+                                                                        name="<?php echo $this->option_key; ?>[socks][<?php echo $gear_index; ?>][prices][day][]"
                                                                         value="<?php echo esc_attr($day); ?>">
                                                                 </td>
                                                                 <td>
                                                                     <input type="number" step="0.01" class="form-control"
-                                                                        name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][prices][value][]"
+                                                                        name="<?php echo $this->option_key; ?>[socks][<?php echo $gear_index; ?>][prices][value][]"
                                                                         value="<?php echo esc_attr($price); ?>">
                                                                 </td>
                                                                 <td>
@@ -105,14 +106,14 @@ class SRS_Socks {
                                         </td>
                                         <td>
                                             <input type="number" step="0.01" class="form-control"
-                                                name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][prices][extra]"
+                                                name="<?php echo $this->option_key; ?>[socks][<?php echo $gear_index; ?>][prices][extra]"
                                                 value="<?php echo esc_attr($gear['prices']['extra'] ?? ''); ?>">
                                         </td>
                                         <td>
                                             <?php if (!empty($renting_options)): 
                                                 $selected = $gear['renting_options'] ?? [];
                                                 ?>
-                                                <select class="form-select" name="<?php echo $this->option_key; ?>[gears][<?php echo $gear_index; ?>][renting_options][]" multiple>
+                                                <select class="form-select" name="<?php echo $this->option_key; ?>[socks][<?php echo $gear_index; ?>][renting_options][]" multiple>
                                                     <?php foreach ($renting_options as $option): ?>
                                                         <option value="<?php echo esc_attr($option); ?>" <?php echo in_array($option, $selected) ? 'selected' : ''; ?>>
                                                             <?php echo esc_html($option); ?>
@@ -124,6 +125,17 @@ class SRS_Socks {
                                                     <?php _e('First add the renting options.', 'ski-ride-servetech'); ?>
                                                 </div>
                                             <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <select class="form-select" name="<?php echo $this->option_key; ?>[socks][<?php echo $gear_index; ?>][type_options][]" multiple>
+                                                <?php 
+                                                $selected_types = $gear['type_options'] ?? [];
+                                                foreach ($this->type_options as $type): ?>
+                                                    <option value="<?php echo esc_attr($type); ?>" <?php echo in_array($type, $selected_types) ? 'selected' : ''; ?>>
+                                                        <?php echo esc_html($type); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
                                         </td>
                                         <td>
                                             <button type="button" class="btn btn-danger btn-sm remove-socks-row"><?php _e('Remove Sock', 'ski-ride-servetech'); ?></button>
@@ -154,12 +166,13 @@ class SRS_Socks {
             'srs-socks-js',
             plugin_dir_url(__DIR__) . '../../assets/js/socks.js',
             ['jquery'],
-            '1.0.0',
+            SRS_PLUGIN_VERSION,
             true
         );
 
         wp_localize_script('srs-socks-js', 'srsSocks', [
             'rentingOptions' => $renting_options,
+            'typeOptions' => $this->type_options,
             'noOptionsMsg'   => __('First add the renting options.', 'ski-ride-servetech'),
         ]);
     }

@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) exit;
 class SRS_Insurance {
 
     private $option_key = 'srs_insurance';
+    private $type_options = ['Child', 'Adult'];
 
     public function __construct() {
         add_action('admin_init', [$this, 'register_settings']);
@@ -18,12 +19,12 @@ class SRS_Insurance {
 
     public function sanitize_settings($input) {
     // Use the universal sanitizer for gears
-        $output = SRS_Sanitize_Settings::sanitize($input, 'insurance');
+        $output = SRS_Sanitize_Settings::sanitize($input, 'insurances');
 
         // Sync products to WooCommerce automatically
-        if (!empty($output['insurance'])) {
-            foreach ($output['insurance'] as &$item) {
-                $item['product_id'] = SRS_Sync_WooCommerce::sync_product($item, 'insurance');
+        if (!empty($output['insurances'])) {
+            foreach ($output['insurances'] as &$item) {
+                $item['product_id'] = SRS_Sync_WooCommerce::sync_product($item, 'insurances');
             }
         }
 
@@ -65,6 +66,9 @@ class SRS_Insurance {
     public function render_page() {
         $options = get_option($this->option_key, []);
         $insurances = $options['insurances'] ?? [];
+        echo "<pre>";
+        print_r($options);
+        echo "</pre>";
         $renting_options = get_option('srs_renting_options', []);
         ?>
         <div class="wrap bootstrap-wrapper">
@@ -79,7 +83,8 @@ class SRS_Insurance {
                                 <th><?php _e('Insurance Name', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Day-wise Prices', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Extra Day Price', 'ski-ride-servetech'); ?></th>
-                                <th><?php _e('Options', 'ski-ride-servetech'); ?></th>
+                                <th><?php _e('Renting Options', 'ski-ride-servetech'); ?></th>
+                                <th><?php _e('Type', 'ski-ride-servetech'); ?></th>
                                 <th><?php _e('Actions', 'ski-ride-servetech'); ?></th>
                             </tr>
                         </thead>
@@ -137,6 +142,7 @@ class SRS_Insurance {
                                         <td>
                                             <?php if (!empty($renting_options)): 
                                                 $selected = $insurance['renting_options'] ?? [];
+                                              
                                                 ?>
                                                 <select class="form-select" name="<?php echo $this->option_key; ?>[insurances][<?php echo $index; ?>][renting_options][]" multiple>
                                                     <?php foreach ($renting_options as $option): ?>
@@ -150,6 +156,17 @@ class SRS_Insurance {
                                                     <?php _e('First add the renting options.', 'ski-ride-servetech'); ?>
                                                 </div>
                                             <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <select class="form-select" name="<?php echo $this->option_key; ?>[insurances][<?php echo $index; ?>][type_options][]" multiple>
+                                                <?php 
+                                                $selected_types = $insurance['type_options'] ?? [];
+                                                foreach ($this->type_options as $type): ?>
+                                                    <option value="<?php echo esc_attr($type); ?>" <?php echo in_array($type, $selected_types) ? 'selected' : ''; ?>>
+                                                        <?php echo esc_html($type); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
                                         </td>
                                         <td>
                                             <button type="button" class="btn btn-danger btn-sm remove-row"><?php _e('Remove Insurance', 'ski-ride-servetech'); ?></button>
@@ -180,12 +197,13 @@ class SRS_Insurance {
             'srs-insurance-js',
             plugin_dir_url(__DIR__) . '../../assets/js/insurance.js',
             ['jquery'],
-            '1.0.0',
+            SRS_PLUGIN_VERSION,
             true
         );
 
         wp_localize_script('srs-insurance-js', 'srsInsurance', [
             'rentingOptions' => $renting_options,
+            'typeOptions' => $this->type_options,
             'noOptionsMsg'   => __('First add the renting options.', 'ski-ride-servetech'),
         ]);
     }

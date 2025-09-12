@@ -36,7 +36,6 @@ class SRS_Boots {
         $options = get_option($this->option_key, []);
         $boots = $options['boots'] ?? [];
         $renting_options = get_option('srs_renting_options', []);
-        $selected_types = $boot['type_options'] ?? [];
         ?>
         <div class="wrap bootstrap-wrapper">
             <h1 class="wp-heading-inline"><?php _e('Boots', 'ski-ride-servetech'); ?></h1>
@@ -128,7 +127,11 @@ class SRS_Boots {
                                            
                                             ?>
                                             <select class="form-select" name="<?php echo $this->option_key; ?>[boots][<?php echo $index; ?>][type_options][]" multiple>
-                                                <?php foreach ($this->type_options as $type): ?>
+                                                
+                                                <?php
+                                                $selected_types = $boot['type_options'] ?? [];
+
+                                                 foreach ($this->type_options as $type): ?>
                                                     <option value="<?php echo esc_attr($type); ?>" <?php echo in_array($type, $selected_types) ? 'selected' : ''; ?>>
                                                         <?php echo esc_html($type); ?>
                                                     </option>

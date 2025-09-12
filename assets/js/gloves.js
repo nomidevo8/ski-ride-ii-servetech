@@ -7,7 +7,7 @@ jQuery(document).ready(function ($) {
         // Build renting options HTML
         let rentingHtml = "";
         if (srsGloves && srsGloves.rentingOptions && srsGloves.rentingOptions.length > 0) {
-            rentingHtml = `<select class="form-select" name="srs_gloves[gears][${index}][renting_options][]" multiple>`;
+            rentingHtml = `<select class="form-select" name="srs_gloves[gloves][${index}][renting_options][]" multiple>`;
             srsGloves.rentingOptions.forEach(function (opt) {
                 rentingHtml += `<option value="${opt}">${opt}</option>`;
             });
@@ -16,15 +16,24 @@ jQuery(document).ready(function ($) {
             rentingHtml = `<div class="alert alert-warning p-2">${srsGloves.noOptionsMsg}</div>`;
         }
 
+        let typeHtml = "";
+        if (srsGloves.typeOptions && srsGloves.typeOptions.length > 0) {
+            typeHtml = `<select class="form-select" name="srs_gloves[gloves][${index}][type_options][]" multiple>`;
+            srsGloves.typeOptions.forEach(function (type) {
+                typeHtml += `<option value="${type}">${type}</option>`;
+            });
+            typeHtml += `</select>`;
+        }
+
         let row = `
         <tr class="gear-row" data-gear-index="${index}">
             <td>
-                <input type="text" class="form-control" name="srs_gloves[gears][${index}][name]">
-                <input type="hidden" name="srs_gloves[gears][${index}][product_id]" value="0">
+                <input type="text" class="form-control" name="srs_gloves[gloves][${index}][name]">
+                <input type="hidden" name="srs_gloves[gloves][${index}][product_id]" value="0">
             </td>
 
             <td>
-                <textarea class="form-control" rows="2" name="srs_gloves[gears][${index}][desc]"></textarea>
+                <textarea class="form-control" rows="2" name="srs_gloves[gloves][${index}][desc]"></textarea>
             </td>
 
             <td>
@@ -42,13 +51,13 @@ jQuery(document).ready(function ($) {
             </td>
 
             <td>
-                <input type="number" step="0.01" class="form-control" name="srs_gloves[gears][${index}][prices][extra]">
+                <input type="number" step="0.01" class="form-control" name="srs_gloves[gloves][${index}][prices][extra]">
             </td>
 
             <td>
                 ${rentingHtml}
             </td>
-
+            <td>${typeHtml}</td>
             <td>
                 <button type="button" class="btn btn-danger btn-sm remove-row">Remove</button>
             </td>
@@ -71,9 +80,9 @@ jQuery(document).ready(function ($) {
         let row = `
         <tr>
             <td><input type="number" min="1" class="form-control"
-                       name="srs_gloves[gears][${gearIndex}][prices][day][]"></td>
+                       name="srs_gloves[gloves][${gearIndex}][prices][day][]"></td>
             <td><input type="number" step="0.01" class="form-control"
-                       name="srs_gloves[gears][${gearIndex}][prices][value][]"></td>
+                       name="srs_gloves[gloves][${gearIndex}][prices][value][]"></td>
             <td><button type="button" class="btn btn-danger btn-sm remove-day">×</button></td>
         </tr>`;
         tbody.append(row);
@@ -93,8 +102,8 @@ jQuery(document).ready(function ($) {
             $(this).find("input, select, textarea").each(function () {
                 let name = $(this).attr("name");
                 if (name) {
-                    // replace the '[gears][<index>]' portion with the new index
-                    name = name.replace(/srs_gloves\[gears]\[\d+]/, `srs_gloves[gears][${i}]`);
+                    // replace the '[gloves][<index>]' portion with the new index
+                    name = name.replace(/srs_gloves\[gloves]\[\d+]/, `srs_gloves[gloves][${i}]`);
                     $(this).attr("name", name);
                 }
             });
