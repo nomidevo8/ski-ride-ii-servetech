@@ -54,6 +54,17 @@ class Admin_settings_page
      public function dev_register_all_menus() {
         $parent_slug = 'srs-settings';
 
+        // Parent menu
+        add_menu_page(
+            __('Ski Ride Content', 'ski-ride-servetech'),
+            __('Ski Ride Content', 'ski-ride-servetech'),
+            'manage_options',
+            $parent_slug,
+            [$this, 'render_settings_page'],
+            'dashicons-edit',
+            30
+        );
+
         // Submenus
         $submenus = [
             'locations'       => 'Locations',
@@ -288,6 +299,18 @@ class Admin_settings_page
         }
     }
 
+
+
+    public function render_settings_page()
+    {
+        $options = get_option($this->option_key, []);
+
+        ?>
+        <div class="wrap bootstrap-wrapper">
+            <h1><?php _e('Ski Ride Form Settings', 'ski-ride-servetech'); ?></h1>
+        </div>
+        <?php
+    }
 
 
 }
