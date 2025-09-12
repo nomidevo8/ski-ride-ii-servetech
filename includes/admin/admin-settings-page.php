@@ -8,6 +8,7 @@ class Admin_settings_page
 {
     private static $_instance = null;
     private $option_key = 'srs_form_settings';
+
     public static function instance()
     {
         if (is_null(self::$_instance)) {
@@ -16,11 +17,16 @@ class Admin_settings_page
         return self::$_instance;
     }
 
-    private function __construct()
-    {
+    private function __construct() {
+        // Enqueue admin scripts/styles
         add_action('admin_enqueue_scripts', [$this, 'myplugin_enqueue_admin_assets']);
-        add_action('admin_menu', [$this, 'register_menu']);
+
+        // Register parent menu and submenus
+        add_action('admin_menu', [$this, 'dev_register_all_menus']);
+
+        // Register settings
         add_action('admin_init', [$this, 'register_settings']);
+        add_action('admin_init', [$this, 'dev_register_settings']);
     }
 
 
@@ -45,24 +51,90 @@ class Admin_settings_page
     }
 
 
-    public function register_menu()
-    {
+     public function dev_register_all_menus() {
+        $parent_slug = 'srs-settings';
+
+        // Parent menu
         add_menu_page(
             __('Ski Ride Content', 'ski-ride-servetech'),
             __('Ski Ride Content', 'ski-ride-servetech'),
             'manage_options',
-            'srs-settings',
+            $parent_slug,
             [$this, 'render_settings_page'],
             'dashicons-edit',
             30
         );
+
+        // Submenus
+        $submenus = [
+            'locations'       => 'Locations',
+            'abilities'       => 'Abilities',
+            'renting-options' => 'Renting Options',
+            'packages'        => 'Packages',
+            'extra-gear'      => 'Extra Gear',
+            'gloves'          => 'Gloves',
+            'goggles'         => 'Goggles',
+            'socks'           => 'Socks',
+            // 'passes'          => 'Passes',
+            'insurance'       => 'Insurance',
+            'boots'           => 'Boots'
+        ];
+
+        foreach ($submenus as $slug => $title) {
+            $class_name = 'SRS_' . str_replace('-', '_', ucwords($slug, '-'));
+            $file = plugin_dir_path(__FILE__) . "inc/{$slug}.php";
+        
+            if (file_exists($file)) include $file;
+
+            if (class_exists($class_name)) {
+                $instance = new $class_name();
+
+                add_submenu_page(
+                    $parent_slug,
+                    $title,
+                    $title,
+                    'manage_options',
+                    'dev-ski-' . $slug,
+                    [$instance, 'render_page']  
+                );
+            } else {
+                add_submenu_page(
+                    $parent_slug,
+                    $title,
+                    $title,
+                    'manage_options',
+                    'dev-ski-' . $slug,
+                    function() use ($slug) {
+                        echo "<h2>{$slug} page not found</h2>";
+                    }
+                );
+            }
+        }
+
     }
 
-    public function register_settings()
-    {
+    /**
+     * Register main plugin settings
+     */
+    public function register_settings() {
         register_setting('srs_settings_group', $this->option_key, [
             'sanitize_callback' => [$this, 'sanitize_settings']
         ]);
+    }
+
+    /**
+     * Register settings for each submenu
+     */
+    public function dev_register_settings() {
+        $submenus = [
+            'locations', 'abilities', 'renting-options', 'packages',
+            'extra-gear', 'gloves', 'goggles', 'socks', 'passes', 'insurance', 'boots'
+        ];
+
+        foreach ($submenus as $slug) {
+            $option_key = 'dev_ski_' . $slug;
+            register_setting('dev_ski_group_' . $slug, $option_key, 'dev_cleanly_sanitize_settings');
+        }
     }
 
 
@@ -99,10 +171,8 @@ class Admin_settings_page
             $output['insurance_product_id'] = $this->sync_woocommerce_product('insurance', $insurance_item);
         }
 
-        // 🔹 Boots Discount (always just stored, applied as fee)
+        // 🔹 Boots Discount
         $output['boots_discount'] = !empty($input['boots_discount']) ? floatval($input['boots_discount']) : 0;
-
-
 
         // Gear Types Configuration
         $gear_types = [
@@ -118,13 +188,13 @@ class Admin_settings_page
             if (!empty($input[$gear_type]) && is_array($input[$gear_type])) {
                 $output[$gear_type] = [];
 
-                // Determine main key (name or title)
                 $main_key = in_array('name', $keys) ? 'name' : 'title';
                 $names_or_titles = $input[$gear_type][$main_key] ?? [];
                 $prices = $input[$gear_type]['price'] ?? [];
                 $descs = $input[$gear_type]['desc'] ?? [];
-                $product_ids     = $input[$gear_type]['product_id'] ?? [];
+                $product_ids = $input[$gear_type]['product_id'] ?? [];
                 $renting_options = $input[$gear_type]['renting_options'] ?? [];
+                $renting_prices_input = $input[$gear_type]['renting_prices'] ?? [];
 
                 $count = max(
                     count($names_or_titles),
@@ -141,7 +211,7 @@ class Admin_settings_page
                     $product_id = $product_ids[$i] ?? 0;
                     $rent_option = $renting_options[$i] ?? [];
 
-                    // Skip completely empty rows
+                    // Skip empty rows
                     if (empty($title) && empty($price) && empty($desc)) {
                         continue;
                     }
@@ -157,8 +227,29 @@ class Admin_settings_page
                         $item_data['desc'] = sanitize_text_field($desc);
                     }
 
-                    // Sync with WooCommerce and update product_id
+                    // 🔹 Handle dynamic day prices
+                    $item_data['renting_prices'] = [];
+                    if (!empty($renting_prices_input[$i])) {
+                        $days = $renting_prices_input[$i]['day'] ?? [];
+                        $day_prices = $renting_prices_input[$i]['price'] ?? [];
+                        $extra_day = floatval($renting_prices_input[$i]['extra_day'] ?? 0);
+
+                        for ($j = 0; $j < max(count($days), count($day_prices)); $j++) {
+                            $day = intval($days[$j] ?? 0);
+                            $d_price = floatval($day_prices[$j] ?? 0);
+                            if ($day > 0 && $d_price > 0) {
+                                $item_data['renting_prices'][$day] = $d_price;
+                            }
+                        }
+
+                        $item_data['renting_prices']['extra_day'] = $extra_day;
+                    }
+
+                    // Sync with WooCommerce
                     $item_data['product_id'] = $this->sync_woocommerce_product($gear_type, $item_data);
+
+                    // Save _rental_prices meta
+                    update_post_meta($item_data['product_id'], '_rental_prices', $item_data['renting_prices']);
 
                     $output[$gear_type][] = $item_data;
                 }
@@ -169,61 +260,45 @@ class Admin_settings_page
     }
 
 
+
     /**
      * 🔹 Sync a gear item with WooCommerce product
      */
     private function sync_woocommerce_product($gear_type, $item)
     {
-        if (!class_exists('WC_Product')) {
-            return 0; // WooCommerce not active
-        }
+        if (!class_exists('WC_Product')) return 0;
 
         $product_name = $item['name'] ?? $item['title'] ?? '';
-        $price        = $item['price'] ?? 0;
-        $product_id   = intval($item['product_id'] ?? 0);
+        $price = $item['price'] ?? 0;
+        $product_id = intval($item['product_id'] ?? 0);
 
-        if (empty($product_name)) {
-            return 0;
-        }
+        if (empty($product_name)) return 0;
 
-        // Try to load by provided product_id first
         $product = $product_id ? wc_get_product($product_id) : false;
 
-        // If no valid product, try finding by title
-        // if (!$product) {
-        //     $existing = get_page_by_title($product_name, OBJECT, 'product');
-        //     if ($existing) {
-        //         $product_id = $existing->ID;
-        //         $product    = wc_get_product($product_id);
-        //     }
-        // }
-
         if ($product) {
-            // Update existing product
             $product->set_regular_price($price);
             $product->set_name($product_name);
-            $product->set_catalog_visibility('hidden'); 
-            if (in_array($gear_type, ['packages', 'gears', 'insurance'])) {
+            $product->set_catalog_visibility('hidden');
+            if (in_array($gear_type, ['packages','gears','insurance'])) {
                 update_post_meta($product->get_id(), 'is_rental', 'yes');
             }
             $product->save();
             return $product->get_id();
         } else {
-            // Create new product
             $new_product = new \WC_Product_Simple();
             $new_product->set_name($product_name);
             $new_product->set_regular_price($price);
-            $new_product->set_catalog_visibility('hidden'); 
-            $new_product->save();   
+            $new_product->set_catalog_visibility('hidden');
+            $new_product->save();
             $new_product_id = $new_product->get_id();
-
-            if (in_array($gear_type, ['packages', 'gears', 'insurance'])) {
+            if (in_array($gear_type, ['packages','gears','insurance'])) {
                 update_post_meta($new_product_id, 'is_rental', 'yes');
             }
-
             return $new_product_id;
         }
     }
+
 
 
     public function render_settings_page()
@@ -681,41 +756,48 @@ class Admin_settings_page
 
         <!-- Dynamic Row Script -->
         <script>
-            jQuery(document).ready(function ($) {
+          jQuery(document).ready(function ($) {
+
                 // 🔹 Make renting options available to JS
                 let rentingOptions = <?php echo json_encode($options['renting_options'] ?? []); ?>;
 
+                // 🔹 Function to build a multi-select for renting options
+                function buildRentingSelect(fieldName) {
+                    let select = "<select class='form-control' multiple name='<?php echo $this->option_key; ?>[" + fieldName + "][renting_options][]'>";
+                    $.each(rentingOptions, function (index, option) {
+                        let title = option.name ?? option; // fallback if option is a string
+                        select += "<option value='" + index + "'>" + title + "</option>";
+                    });
+                    select += "</select>";
+                    return select;
+                }
+
+                // 🔹 Add new row
                 $(".add-row").on("click", function () {
                     let field = $(this).data("field");
                     let table = $(".repeater-table[data-field='" + field + "'] tbody");
 
                     let row = "";
 
-                    // 🔹 Build renting options select HTML
-                    let selectHtml = "<select class='form-control' multiple name='<?php echo $this->option_key; ?>[" + field + "][renting_options][]'>";
-                    $.each(rentingOptions, function (index, name) {
-                        selectHtml += "<option value='" + index + "'>" + name + "</option>";
-                    });
-                    selectHtml += "</select>";
-
                     if (["packages", "gloves", "goggles", "socks"].includes(field)) {
                         row = `<tr>
-                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][name][]" placeholder="Name"></td>
-                            <td><input type="number" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][price][]" placeholder="Price"></td>
-                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][desc][]" placeholder="Description"></td>
-                            <td>${selectHtml}</td>
+                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[` + field + `][name][]" placeholder="Name"></td>
+                            <td><input type="number" class="form-control" name="<?php echo $this->option_key; ?>[` + field + `][price][]" placeholder="Price"></td>
+                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[` + field + `][desc][]" placeholder="Description"></td>
+                            <td>` + buildRentingSelect(field) + `</td>
                             <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
                         </tr>`;
-                    } else if (field === "passes" || field === "gears") {
+                    } else if (["passes", "gears"].includes(field)) {
                         row = `<tr>
-                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][title][]" placeholder="Title"></td>
-                            <td><input type="number" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][price][]" placeholder="Price"></td>
-                            <td>${selectHtml}</td>
+                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[` + field + `][title][]" placeholder="Title"></td>
+                            <td><input type="number" class="form-control" name="<?php echo $this->option_key; ?>[` + field + `][price][]" placeholder="Price"></td>
+                            <td>` + buildRentingSelect(field) + `</td>
                             <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
                         </tr>`;
                     } else {
+                        // Simple text input for locations, abilities, etc.
                         row = `<tr>
-                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[`+ field + `][]" placeholder="Enter value"></td>
+                            <td><input type="text" class="form-control" name="<?php echo $this->option_key; ?>[` + field + `][]" placeholder="Enter value"></td>
                             <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
                         </tr>`;
                     }
@@ -727,6 +809,7 @@ class Admin_settings_page
                 $(document).on("click", ".remove-row", function () {
                     $(this).closest("tr").remove();
                 });
+
             });
         </script>
 

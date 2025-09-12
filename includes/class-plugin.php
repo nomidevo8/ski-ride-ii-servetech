@@ -7,7 +7,6 @@ if (!defined('ABSPATH'))
 class Plugin
 {
     private static $_instance = null;
-
     public static function instance()
     {
         if (is_null(self::$_instance)) {
@@ -20,6 +19,7 @@ class Plugin
     {
         // Elementor Init
         add_action('plugins_loaded', [$this, 'init']);
+
     }
 
     public function init()
@@ -70,4 +70,8 @@ class Plugin
         esc_html_e('Ski Ride Servetech requires WooCommerce to be installed and activated.', 'ski-ride-servetech');
         echo '</p></div>';
     }
+
+
+
+
 }
