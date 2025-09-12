@@ -50,8 +50,8 @@ class Widget_Manager
         );
 
         // Later: add your CSS + JS for form steps
-        wp_enqueue_style('srs-style', SRS_PLUGIN_URL . 'assets/css/style.css', [], '1.0.2');
-        wp_enqueue_script('srs-script', SRS_PLUGIN_URL . 'assets/js/script.js', ['jquery'], '1.0.0.54', true);
+        wp_enqueue_style('srs-style', SRS_PLUGIN_URL . 'assets/css/style.css', [], SRS_PLUGIN_VERSION);
+        wp_enqueue_script('srs-script', SRS_PLUGIN_URL . 'assets/js/script.js', ['jquery'], SRS_PLUGIN_VERSION, true);
 
         wp_localize_script(
             'srs-script',
@@ -118,7 +118,7 @@ class Widget_Manager
         wp_enqueue_script(
             'toastr-js',
             'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js',
-            ['jquery'], // or [] if no jQuery dependency
+            ['jquery'], 
             '2.1.4',
             true
         );

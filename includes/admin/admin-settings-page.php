@@ -71,13 +71,13 @@ class Admin_settings_page
             'abilities'       => 'Abilities',
             'renting-options' => 'Renting Options',
             'packages'        => 'Packages',
-            'extra-gear'      => 'Extra Gear',
             'gloves'          => 'Gloves',
             'goggles'         => 'Goggles',
             'socks'           => 'Socks',
+            'boots'           => 'Boots',
+            'extra-gear'      => 'Extra Gear',
             // 'passes'          => 'Passes',
-            'insurance'       => 'Insurance',
-            'boots'           => 'Boots'
+            'insurance'       => 'Insurance'
         ];
 
         foreach ($submenus as $slug => $title) {
