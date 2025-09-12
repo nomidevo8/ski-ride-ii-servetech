@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) exit;
 class SRS_Extra_Gear {
 
     private $option_key = 'srs_extra_gear';
-    private $type_options = ['Child', 'Adult'];
+    private $type_options = SRS_TYPE_OPTIONS;
 
     public function __construct() {
         add_action('admin_init', [$this, 'register_settings']);

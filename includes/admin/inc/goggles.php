@@ -6,7 +6,7 @@ require_once plugin_dir_path(__FILE__) . 'woocommerce-sync.php';
 class SRS_Goggles {
 
     private $option_key = 'srs_goggles';
-    private $type_options = ['Child', 'Adult'];
+    private $type_options = SRS_TYPE_OPTIONS;
     public function __construct() {
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_scripts'], 1);

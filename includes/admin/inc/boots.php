@@ -6,7 +6,7 @@ require_once plugin_dir_path(__FILE__) . 'woocommerce-sync.php';
 class SRS_Boots {
 
     private $option_key = 'srs_boots';
-    private $type_options = ['Child', 'Adult'];
+    private $type_options = SRS_TYPE_OPTIONS;
     public function __construct() {
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_scripts'], 1);
@@ -167,12 +167,13 @@ class SRS_Boots {
             'srs-boots-js',
             plugin_dir_url(__DIR__) . '../../assets/js/boots.js',
             ['jquery'],
-            '1.0.0',
+            SRS_PLUGIN_VERSION,
             true
         );
 
         wp_localize_script('srs-boots-js', 'srsBoots', [
             'rentingOptions' => $renting_options,
+            'typeOptions' => $this->type_options,
             'noOptionsMsg'   => __('First add the renting options.', 'ski-ride-servetech'),
         ]);
     }

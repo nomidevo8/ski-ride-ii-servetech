@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) exit;
 class SRS_Packages {
 
     private $option_key = 'srs_packages';
-    private $type_options = ['Child', 'Adult'];
+    private $type_options = SRS_TYPE_OPTIONS;
 
     public function __construct() {
         add_action('admin_init', [$this, 'register_settings']);

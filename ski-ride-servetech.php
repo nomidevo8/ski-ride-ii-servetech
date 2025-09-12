@@ -18,6 +18,8 @@ define( 'SRS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 // define('SRS_PLUGIN_VERSION', '1.3.2');
 define('SRS_PLUGIN_VERSION', time());
 
+define('SRS_TYPE_OPTIONS', ['Child', 'Adult']);
+
 // Autoload or manual includes
 require_once SRS_PLUGIN_PATH . 'includes/class-plugin.php';
 
